@@ -106,3 +106,30 @@
   - 新建 SEISMIC-CAPACITY-METHOD.md（耐震能力設計法，RC-U3-3）
   - 知識庫健康狀態：wiki/ 七層架構全部完整，無缺漏
   - 操作者：Cowork
+
+## 2026-06-10
+
+- **[FREQUENCY]** 執行 frequency 指令，生成 wiki/queries/frequency-20260610.md
+  - 統計全 100 題（2002–2025）各 topicId 出現頻次（primary + secondary）
+  - 結果：RC-U1-1=22、RC-U4-1=21、RC-U1-2=19、RC-U3-3=16、RC-U2-1=16
+  - 操作者：Cowork
+
+- **[PREDICT]** 執行 predict 指令，生成 wiki/queries/predict-2026-20260610.md
+  - 基於頻次統計＋近年趨勢＋補考點分析推測 2026 高機率考題
+  - 優先補考點：RC-U3-1（8 年未考）、RC-U4-3（7 年未考）、RC-U1-3（10 年未考）
+  - 操作者：Cowork
+
+- **[RAW-METHODS]** 補建 raw/solutions/methods/ 來源檔案（4 個方法論 .md）
+  - 新建 raw/solutions/methods/effective-inertia-deflection/effective-inertia-deflection.md
+  - 新建 raw/solutions/methods/moment-magnifier-method/moment-magnifier-method.md
+  - 新建 raw/solutions/methods/prestress-loss-calculation/prestress-loss-calculation.md
+  - 新建 raw/solutions/methods/pm-interaction-diagram/pm-interaction-diagram.md
+  - 修正 raw/→wiki/ 單向資料流缺口，4 個 wiki/methods/ 頁面現有對應原始檔
+  - 操作者：Cowork
+
+- **[TRAPS-BACKLINKS]** 建立 traps↔problems 雙向連結
+  - 讀取全部 13 個 wiki/traps/ 陷阱頁，建立完整 trap→problem 對應表
+  - 在 52 個 wiki/problems/ 頁末尾加入「## 相關陷阱」反向連結區塊
+  - 涵蓋陷阱：T-BEAM-EFFECTIVE-WIDTH、BALANCED-RATIO-BOUNDARY、PHI-FACTOR-TRANSITION、COMPRESSION-STEEL-YIELDING、SHEAR-CRITICAL-SECTION、TORSION-THRESHOLD、DEFLECTION-EFFECTIVE-INERTIA、PUNCHING-SHEAR-CRITICAL、SEISMIC-BEAM-VE、JOINT-SHEAR-EFFECTIVE-AREA、LONG-COLUMN-SLENDERNESS、PRESTRESS-LOSS-SEQUENCE、PRESTRESS-FPS-FORMULA
+  - wiki/traps/ 雙向連結完整度：13/13 陷阱頁均建立反向連結
+  - 操作者：Cowork
