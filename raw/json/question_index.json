@@ -587,7 +587,7 @@
       "designMethod": "USD",
       "verificationStatus": "verified",
       "hasSolution": true,
-      "hasViz": false,
+      "hasViz": true,
       "hasHandwritten": false,
       "tags": [
         "曲率延展比",
