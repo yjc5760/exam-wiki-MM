@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>exam-wiki-RC 知識庫 — 鋼筋混凝土設計與預力</title>
+<title>exam-wiki-MM 知識庫儀表板 — 材料力學</title>
 <style>
   :root{
     --bg:#f5f6f8; --card:#ffffff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb;
@@ -100,6 +100,7 @@
   #readerBody .md .texsrc{background:#fef9c3;border-radius:4px;padding:1px 6px;font-size:.85em}
   #readerBody .md a{color:var(--accent)}
   .rmsg{padding:26px;text-align:center;color:var(--muted)}
+  .rmsg button{margin-top:12px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:1rem;cursor:pointer;font-family:inherit}
   .rmsg .small{font-size:.8rem;margin-top:10px}
   #mathHint{display:none;font-size:.75rem;color:#b45309;background:#fef3c7;border-radius:6px;padding:2px 10px}
   #printHeader{display:none}
@@ -123,8 +124,8 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>📚 鋼筋混凝土設計與預力 — 考古題知識庫</h1>
-    <span class="sub">結構工程技師高考第三科｜exam-wiki-RC</span>
+    <h1>📚 材料力學 — 考古題知識庫</h1>
+    <span class="sub">結構工程技師高考第一科｜exam-wiki-MM</span>
   </header>
 
   <div class="stats" id="stats"></div>
@@ -140,17 +141,17 @@
   <!-- 題庫瀏覽 -->
   <section class="panel on" id="p-browse">
     <div class="toolbar">
-      <input type="search" id="q" placeholder="搜尋題號、考點、標籤…（如：P-M互制、T形梁、摩擦損失）">
+      <input type="search" id="q" placeholder="搜尋題號、考點、標籤…（如：Mohr's circle、撓度積分、塑性鉸、Euler 挫屈）">
       <select id="fYear"><option value="">全部年份</option></select>
       <select id="fUnit"><option value="">全部單元</option></select>
       <select id="fTopic"><option value="">全部考點</option></select>
       <select id="fMethod"><option value="">全部設計法</option>
-        <option>USD</option><option>WSD</option><option>概念題</option><option>混合</option></select>
+        <option>彈性分析</option><option>塑性分析</option><option>能量法</option><option>概念題</option><option>混合</option></select>
       <select id="fProg"><option value="">全部進度</option>
         <option value="0">⬜ 未練習</option><option value="1">✅ 已練習</option><option value="2">🔁 需複習</option></select>
       <select id="fViz"><option value="">互動圖（全部）</option><option value="1">有互動圖</option></select>
       <select id="sort"><option value="desc">新→舊</option><option value="asc">舊→新</option></select>
-      <div class="hint">「📄 完整解析」在站內閱讀器開啟（Markdown＋LaTeX 渲染）。點題卡右上角循環標記進度（記錄存於本機瀏覽器），點標籤快速搜尋。</div>
+      <div class="hint">「📄 完整解析」在站內閱讀器開啟（Markdown＋LaTeX 渲染；首次使用需選擇一次知識庫資料夾）。點題卡右上角循環標記進度，點標籤快速搜尋。</div>
     </div>
     <div class="qlist" id="list"></div>
   </section>
@@ -176,17 +177,36 @@
       <div class="navgrid">
         <button class="navcard" data-md="wiki/index.md" data-t="wiki 主導航"><b>📖 wiki 主導航</b><p>七層架構總目錄，依命題大綱分類所有題目</p></button>
         <button class="navcard" data-md="wiki/by-year.md" data-t="依年份瀏覽"><b>📅 依年份瀏覽</b><p>2002–2025 歷年考題索引</p></button>
-        <button class="navcard" data-md="wiki/concepts/GLOSSARY.md" data-t="概念辭典"><b>💡 概念辭典</b><p>Whitney 應力塊、P-M 圖、有效慣性矩等核心概念</p></button>
+        <button class="navcard" data-md="wiki/concepts/MOHRS-CIRCLE.md" data-t="莫爾圓概念"><b>💡 核心概念（莫爾圓）</b><p>主應力、最大剪應力、應力轉換</p></button>
         <button class="navcard" data-md="wiki/diagnosis/index.md" data-t="題型診斷"><b>🩺 題型診斷</b><p>拿到考題如何判斷題型的決策樹</p></button>
-        <button class="navcard" data-md="wiki/traps/index.md" data-t="陷阱總表"><b>⚠️ 陷阱總表</b><p>13 個常見出題陷阱（φ 過渡區、T 梁有效寬…）</p></button>
-        <button class="navcard" data-md="wiki/philosophy/index.md" data-t="設計哲學"><b>🏛️ 設計哲學</b><p>USD 折減、韌性、耐震能力設計的「為什麼」</p></button>
-        <button class="navcard" data-md="wiki/failure-modes/index.md" data-t="失敗模式"><b>💥 失敗模式</b><p>彎曲/剪力/壓碎/撓度/裂縫五大破壞類別</p></button>
-        <button class="navcard" data-md="wiki/materials/index.md" data-t="材料行為"><b>🧱 材料行為</b><p>混凝土應力應變、鋼筋降伏、潛變收縮、預力鋼絞線</p></button>
-        <button class="navcard" data-md="wiki/code-ref/index.md" data-t="規範條文"><b>📜 規範條文</b><p>ACI 318、CNS 1480、耐震規範對應</p></button>
-        <button class="navcard" data-md="wiki/queries/出題頻率分析.md" data-t="出題頻率分析"><b>📈 出題頻率分析</b><p>歷年考點頻率統計報告</p></button>
-        <button class="navcard" data-md="wiki/queries/題庫缺口報告-2026-06-07.md" data-t="題庫缺口報告"><b>🕳️ 題庫缺口報告</b><p>尚未覆蓋的考點與待補項目</p></button>
+        <button class="navcard" data-md="wiki/traps/index.md" data-t="陷阱總表"><b>⚠️ 陷阱總表</b><p>常見出題陷阱（莫爾圓符號、細長比、薄壁 Am 定義…）</p></button>
+        <button class="navcard" data-md="wiki/philosophy/index.md" data-t="解析哲學"><b>🏛️ 解析哲學</b><p>彈性分析、塑性分析、疊加法、能量法的「為什麼」</p></button>
+        <button class="navcard" data-md="wiki/failure-modes/index.md" data-t="失敗模式"><b>💥 失敗模式</b><p>降伏/挫屈/斷裂/過大變形四大失效類別</p></button>
+        <button class="navcard" data-md="wiki/materials/index.md" data-t="材料行為"><b>🧱 材料行為</b><p>彈塑性鋼材、脆性材料、材料常數（E/G/ν）</p></button>
+        <button class="navcard" data-md="wiki/code-ref/index.md" data-t="公式彙整"><b>📜 核心公式彙整</b><p>應力公式、撓度公式、挫屈公式、塑性公式</p></button>
+        <button class="navcard" data-md="wiki/methods/index.md" data-t="解題方法論"><b>🔧 解題方法論</b><p>Mohr's circle、雙積分法、Euler 挫屈、塑性鉸虛功法</p></button>
+        <button class="navcard" data-md="wiki/queries/index.md" data-t="查詢結果"><b>📋 查詢結果</b><p>frequency、predict、analyze 等指令輸出</p></button>
         <button class="navcard" data-md="README.md" data-t="README"><b>🚀 README</b><p>知識庫冷啟動導覽與工作流程</p></button>
       </div>
+    </div>
+    <div class="card">
+      <h2>核心工作流程</h2>
+      <table class="cmd">
+        <tr><th>想做什麼</th><th>怎麼做</th></tr>
+        <tr><td>解一套新考卷</td><td>對 Cowork 說 <code>解析 XXXX 年考卷</code> → 依提醒截圖 → 說 <code>截圖完成，請開始解題</code>（一次解一題）</td></tr>
+        <tr><td>驗算後入庫</td><td>人工驗算 → 說 <code>將 MM-XXXX-N 的 verificationStatus 改為 verified</code> → 說 <code>ingest MM-XXXX-N</code></td></tr>
+        <tr><td>查詢知識</td><td>直接對 Cowork 提問，結果會存入 wiki/queries/</td></tr>
+        <tr><td>更新本儀表板</td><td>索引變動後，對 Cowork 說 <code>更新儀表板資料</code>（重新生成 dashboard-data.js）</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- 歷年考卷 -->
+  <section class="panel" id="p-exams">
+    <div class="card">
+      <h2>原始考卷 PDF（2002–2025）</h2>
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:10px">點擊在新分頁開啟原始考卷。</p>
+      <div class="navgrid" id="examList"></div>
     </div>
   </section>
 
@@ -196,7 +216,7 @@
       <h2>📦 wiki 編譯與維護</h2>
       <table class="cmd">
         <tr><th>觸發語句</th><th>用途</th></tr>
-        <tr><td><code>ingest RC-XXXX-N</code></td><td>將一道已驗證（verified）題目寫入 wiki，同步更新 index 與 by-year</td></tr>
+        <tr><td><code>ingest MM-XXXX-N</code></td><td>將一道已驗證（verified）題目寫入 wiki，同步更新 index 與 by-year</td></tr>
         <tr><td><code>compile all</code></td><td>從 raw/ 重建整個 wiki（concepts、methods、problems、index）</td></tr>
         <tr><td><code>lint wiki</code></td><td>16 項健檢：斷鏈、孤頁、概念缺口、圖說缺漏、數量一致性…</td></tr>
         <tr><td><code>status</code></td><td>驗證進度統計、各狀態題目清單、常見標籤排行</td></tr>
@@ -213,7 +233,7 @@
         <tr><td><code>frequency</code></td><td>統計各考點歷年出現次數與單元比例</td></tr>
         <tr><td><code>analyze YYYY</code></td><td>分析某年考卷的考點分布、難度與歷年異同</td></tr>
         <tr><td><code>predict</code></td><td>依近 3/5/10 年趨勢推測下次考試最可能考點</td></tr>
-        <tr><td><code>study RC-UN</code></td><td>彙整某單元所有題目與重點（如 <code>study RC-U4</code>）</td></tr>
+        <tr><td><code>study MM-UN</code></td><td>彙整某單元所有題目與重點（如 <code>study MM-U4</code>）</td></tr>
       </table>
     </div>
     <div class="card">
@@ -221,23 +241,14 @@
       <table class="cmd">
         <tr><th>觸發語句</th><th>用途</th></tr>
         <tr><td><code>find [關鍵字]</code></td><td>快速搜尋含某關鍵字的題目</td></tr>
-        <tr><td><code>related RC-XXXX-N</code></td><td>找出考點相似的其他題目</td></tr>
+        <tr><td><code>related MM-XXXX-N</code></td><td>找出考點相似的其他題目</td></tr>
         <tr><td><code>unverified</code></td><td>列出有解析但尚未驗證的題目</td></tr>
         <tr><td>直接提問</td><td>自由查詢知識庫，結果存入 wiki/queries/</td></tr>
       </table>
     </div>
   </section>
 
-  <!-- 歷年考卷 -->
-  <section class="panel" id="p-exams">
-    <div class="card">
-      <h2>原始考卷 PDF（2002–2025）</h2>
-      <p style="font-size:.85rem;color:var(--muted);margin-bottom:10px">點擊在新分頁開啟原始考卷。</p>
-      <div class="navgrid" id="examList"></div>
-    </div>
-  </section>
-
-  <footer>exam-wiki-RC 知識庫｜結構工程技師高考第三科：鋼筋混凝土設計與預力｜靜態網站（GitHub Pages）</footer>
+  <footer>exam-wiki-MM 儀表板｜資料來源：raw/json/question_index.json（dashboard-data.js 快照）｜索引更新後請對 Cowork 說「更新儀表板資料」</footer>
 </div>
 
 <!-- 解析閱讀器 -->
@@ -256,12 +267,12 @@
 <script src="dashboard-data.js"></script>
 <script>
 (function(){
-  if(!window.RC_QUESTIONS){document.getElementById('list').innerHTML='<div class="empty">找不到 dashboard-data.js，請確認檔案與本頁在同一資料夾。</div>';return;}
-  const Q = RC_QUESTIONS.map(r=>({id:r[0],year:+r[0].split('-')[1],num:+r[0].split('-')[2],roc:+r[0].split('-')[1]-1911,topic:r[1],sec:r[2],method:r[3],viz:r[4],tags:r[5]}));
-  const TOPICS=RC_TOPICS, UNITS=RC_UNITS;
+  if(!window.MM_QUESTIONS){document.getElementById('list').innerHTML='<div class="empty">找不到 dashboard-data.js，請確認檔案與本頁在同一資料夾。</div>';return;}
+  const Q = MM_QUESTIONS.map(r=>({id:r[0],year:+r[0].split('-')[1],num:+r[0].split('-')[2],roc:+r[0].split('-')[1]-1911,topic:r[1],sec:r[2],method:r[3],viz:r[4],tags:r[5]}));
+  const TOPICS=MM_TOPICS, UNITS=MM_UNITS;
   const UCOLOR={U1:'var(--u1)',U2:'var(--u2)',U3:'var(--u3)',U4:'var(--u4)'};
   const unitOf=t=>t.split('-')[0];
-  const PKEY='rcwiki-progress';
+  const PKEY='mmwiki-progress';
   let prog={}; try{prog=JSON.parse(localStorage.getItem(PKEY)||'{}')}catch(e){}
   const saveProg=()=>localStorage.setItem(PKEY,JSON.stringify(prog));
 
@@ -365,15 +376,6 @@
       document.querySelector('nav.tabs button[data-p=browse]').click();render();});
   }
 
-  // ---- 歷年考卷 ----
-  function renderExams(){
-    const years=[...new Set(Q.map(q=>q.year))].sort((a,b)=>b-a);
-    document.getElementById('examList').innerHTML=years.map(y=>{
-      const n=Q.filter(q=>q.year===y).length;
-      return `<a class="navcard" href="${encodeURI('raw/exams/RC-'+y+'_鋼筋混凝土設計與預力.pdf')}" target="_blank">
-        <b>📄 ${y} 年考卷</b><p>民國 ${y-1911} 年｜已收錄 ${n} 題解析</p></a>`;}).join('');
-  }
-
   // ---- 分頁 ----
   document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
     document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.remove('on'));
@@ -385,19 +387,29 @@
     if(nc&&nc.dataset.md)openMd(nc.dataset.md,nc.dataset.t||nc.dataset.md);
   });
 
+  // ---- 歷年考卷 ----
+  function renderExams(){
+    const years=[...new Set(Q.map(q=>q.year))].sort((a,b)=>b-a);
+    document.getElementById('examList').innerHTML=years.map(y=>{
+      const n=Q.filter(q=>q.year===y).length;
+      return `<a class="navcard" href="${encodeURI('raw/exams/MM-'+y+'_材料力學.pdf')}" target="_blank">
+        <b>📄 ${y} 年考卷</b><p>民國 ${y-1911} 年｜已收錄 ${n} 題解析</p></a>`;}).join('');
+  }
+
   renderStats();render();renderCharts();renderExams();
 
-  /* ================= 解析閱讀器（GitHub Pages 版：fetch 讀取） ================= */
+  /* ================= 解析閱讀器 ================= */
   const overlay=document.getElementById('overlay'),reader=document.getElementById('reader'),
         rBody=document.getElementById('readerBody'),rTitle=document.getElementById('readerTitle'),
         mathHint=document.getElementById('mathHint');
   let currentPath='';
-  function closeReader(){overlay.classList.remove('on');reader.classList.remove('on');rBody.innerHTML='';
-    if(location.hash)history.replaceState(null,'',location.pathname+location.search);}
+  let blobUrls=[];
+  function closeReader(){overlay.classList.remove('on');reader.classList.remove('on');
+    blobUrls.forEach(u=>URL.revokeObjectURL(u));blobUrls=[];rBody.innerHTML='';}
   document.getElementById('btnClose').addEventListener('click',closeReader);
   overlay.addEventListener('click',closeReader);
   document.addEventListener('keydown',e=>{if(e.key==='Escape')closeReader();});
-  document.getElementById('btnRawOpen').addEventListener('click',()=>{if(currentPath)window.open(encodeURI(currentPath),'_blank');});
+  document.getElementById('btnRawOpen').addEventListener('click',()=>{if(currentPath)window.open(currentPath,'_blank');});
   document.getElementById('btnPdf').addEventListener('click',()=>{
     if(!rBody.querySelector('.md')){alert('內容尚未載入完成，請稍候再匯出。');return;}
     const oldTitle=document.title;
@@ -423,14 +435,42 @@
     const t0=Date.now();
     (function chk(){if(katexState!=='loading'||Date.now()-t0>ms)return res();setTimeout(chk,100);})();});}
 
-  // ---- 路徑解析（相對於 .md 所在資料夾；@root/ 表示網站根） ----
-  function resolvePath(baseDir,p){
-    p=p.split('#')[0];
-    try{p=decodeURIComponent(p);}catch(e){}
-    if(p.indexOf('@root/')===0)return p.slice(6);
-    const stack=baseDir?baseDir.split('/'):[];
-    p.split('/').forEach(seg=>{if(seg==='..')stack.pop();else if(seg&&seg!=='.')stack.push(seg);});
-    return stack.join('/');
+  // ---- File System Access：資料夾授權 ----
+  const IDB='mmwiki-fs';let dirHandle=null;
+  function idbGet(){return new Promise(res=>{const r=indexedDB.open(IDB,1);
+    r.onupgradeneeded=()=>r.result.createObjectStore('kv');
+    r.onerror=()=>res(null);
+    r.onsuccess=()=>{const tx=r.result.transaction('kv','readonly').objectStore('kv').get('dir');
+      tx.onsuccess=()=>res(tx.result||null);tx.onerror=()=>res(null);};});}
+  function idbSet(h){return new Promise(res=>{const r=indexedDB.open(IDB,1);
+    r.onupgradeneeded=()=>r.result.createObjectStore('kv');
+    r.onerror=()=>res();
+    r.onsuccess=()=>{const tx=r.result.transaction('kv','readwrite').objectStore('kv').put(h,'dir');
+      tx.onsuccess=()=>res();tx.onerror=()=>res();};});}
+  async function ensureDir(interactive){
+    if(dirHandle)return dirHandle;
+    if(!window.showDirectoryPicker)return null;
+    let h=await idbGet();
+    if(h){let p=await h.queryPermission({mode:'read'});
+      if(p==='prompt'&&interactive)p=await h.requestPermission({mode:'read'});
+      if(p==='granted'){dirHandle=h;return h;}}
+    if(!interactive)return null;
+    try{h=await showDirectoryPicker({mode:'read'});}catch(e){return null;}
+    try{await h.getDirectoryHandle('raw');}catch(e){
+      alert('選擇的資料夾內找不到 raw/，請選擇 exam-wiki-MM 資料夾本身。');return null;}
+    dirHandle=h;await idbSet(h);return h;
+  }
+  async function readFileByPath(relPath){
+    if (window.location.protocol.startsWith('http')) {
+      const res = await fetch(relPath);
+      if (!res.ok) throw new Error(res.statusText);
+      return await res.blob();
+    }
+    const parts=relPath.split('/').filter(Boolean);
+    let d=dirHandle;
+    for(let i=0;i<parts.length-1;i++)d=await d.getDirectoryHandle(parts[i]);
+    const fh=await d.getFileHandle(parts[parts.length-1]);
+    return await fh.getFile();
   }
 
   // ---- Markdown + LaTeX 渲染 ----
@@ -441,7 +481,7 @@
   }
   function mdToHtml(src){
     const stash=[];
-    const keep=h=>{stash.push(h);return ''+(stash.length-1)+'';};
+    const keep=(html)=>{stash.push(html);return `${stash.length-1}`;};
     // 1. 圍欄程式碼
     src=src.replace(/```([\s\S]*?)```/g,(m,c)=>keep(`<pre>${esc(c.replace(/^\w*\n/,''))}</pre>`));
     // 2. display math
@@ -450,32 +490,23 @@
     src=src.replace(/\$([^$\n]+?)\$/g,(m,t)=>keep(renderTex(t.trim(),false)));
     // 4. 行內 code
     src=src.replace(/`([^`\n]+?)`/g,(m,c)=>keep(`<code class="inline">${esc(c)}</code>`));
-    // 5. wikilink：[[RC-YYYY-N]] → 題目頁；其他（如 [[RC-U1-2]]）→ 標示文字
-    src=src.replace(/\[\[([^\]\n]+?)\]\]/g,(m,id)=>{
-      id=id.trim();
-      if(/^RC-\d{4}-\d+$/.test(id))return keep(`<a href="#" data-mdlink="@root/wiki/problems/${id}.md">${esc(id)}</a>`);
-      return keep(`<code class="inline">${esc(id)}</code>`);
-    });
-    // 6. 圖片（路徑於載入後解析）
+    // 5. 圖片（路徑稍後解析）
     src=src.replace(/!\[([^\]]*)\]\(([^)]+)\)/g,(m,alt,p)=>keep(`<img alt="${esc(alt)}" data-mdsrc="${esc(p)}">`));
-    // 7. 連結
+    // 6. 連結
     src=src.replace(/\[([^\]]+)\]\(([^)]+)\)/g,(m,txt,p)=>{
-      if(/^https?:|^mailto:/i.test(p))return keep(`<a href="${esc(p)}" target="_blank">${esc(txt)}</a>`);
-      if(/^#/.test(p))return keep(`<a href="${esc(p)}">${esc(txt)}</a>`);
-      if(/\/$/.test(p))return keep(`<a href="#" data-mdlink="${esc(p)}index.md">${esc(txt)}</a>`);
       if(/\.md($|#)/i.test(p))return keep(`<a href="#" data-mdlink="${esc(p)}">${esc(txt)}</a>`);
-      return keep(`<a href="#" data-rel="${esc(p)}">${esc(txt)}</a>`);});
+      return keep(`<a href="${esc(p)}" target="_blank">${esc(txt)}</a>`);});
     // 逐行區塊解析
     const lines=src.split('\n');const out=[];
     let i=0,listStack=null,para=[];
     const flushP=()=>{if(para.length){out.push(`<p>${para.map(inline).join('<br>')}</p>`);para=[];}};
     const flushL=()=>{if(listStack){out.push(listStack==='ul'?'</ul>':'</ol>');listStack=null;}};
     function inline(s){
-      s=s.replace(/\\([#*_{}$\\])/g,(m,c)=>''+c.charCodeAt(0)+'');
+      s=s.replace(/\\([#*_{}$\\])/g,(m,c)=>''+c.charCodeAt(0)+'');
       s=esc(s);
       s=s.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
       s=s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g,'$1<em>$2</em>');
-      s=s.replace(/(\d+)/g,(m,c)=>String.fromCharCode(+c));
+      s=s.replace(/(\d+)/g,(m,c)=>String.fromCharCode(+c));
       return s;}
     while(i<lines.length){
       const ln=lines[i];
@@ -502,60 +533,79 @@
     }
     flushP();flushL();
     let html=out.join('\n');
-    html=html.replace(/(\d+)/g,(m,n)=>stash[+n]);
+    html=html.replace(/(\d+)/g,(m,n)=>stash[+n]);
     return html;
   }
 
-  async function openMd(relPath,title,updateHash){
-    if(updateHash===undefined)updateHash=true;
+  async function openMd(relPath,title){
     currentPath=relPath;
     rTitle.textContent=title||relPath;
     overlay.classList.add('on');reader.classList.add('on');
     rBody.innerHTML='<div class="rmsg">讀取中…</div>';
+    const isHttp = window.location.protocol.startsWith('http');
+    if(!isHttp && !window.showDirectoryPicker){
+      rBody.innerHTML=`<div class="rmsg">此瀏覽器不支援資料夾讀取（File System Access API）。<br>
+        建議使用 Edge 或 Chrome 開啟本儀表板。<br>
+        <div class="small"><a href="${relPath}" target="_blank">改以純文字開啟原始檔 →</a></div></div>`;return;}
+    
+    if(!isHttp){
+      let h=await ensureDir(false);
+      if(!h){
+        rBody.innerHTML=`<div class="rmsg">首次使用站內閱讀器，請授權讀取知識庫資料夾<br>（選擇 <b>exam-wiki-MM</b> 資料夾，僅需一次）<br>
+          <button id="btnPick">📂 選擇資料夾</button>
+          <div class="small">瀏覽器安全限制：本機網頁需經您同意才能讀取檔案。</div></div>`;
+        document.getElementById('btnPick').addEventListener('click',async()=>{
+          h=await ensureDir(true);
+          if(h)openMd(relPath,title);});
+        return;}
+    }
+    
     let text;
-    try{
-      const res=await fetch(encodeURI(relPath));
-      if(!res.ok)throw new Error('HTTP '+res.status);
-      text=await res.text();
-    }catch(e){
-      rBody.innerHTML=`<div class="rmsg">讀取失敗：${esc(relPath)}<br>
-        <div class="small">${esc(e.message||String(e))}</div>
-        <div class="small">此檔案可能尚未上傳至網站，或路徑已變更。</div></div>`;
+    try{const f=await readFileByPath(relPath);text=await f.text();}
+    catch(e){
+      rBody.innerHTML=`<div class="rmsg">讀取失敗：${esc(relPath)}<br><div class="small">${esc(e.message||String(e))}</div><br>
+      <div class="small" style="color:var(--warn)">可能是資料夾位置已變更或檔案不存在。</div>
+      ${!isHttp ? '<button id="btnResetHandle">重新選擇資料夾</button>' : ''}</div>`;
+      if(!isHttp){
+        document.getElementById('btnResetHandle').addEventListener('click', () => {
+          const r=indexedDB.open(IDB,1);
+          r.onsuccess=()=>{
+            r.result.transaction('kv','readwrite').objectStore('kv').delete('dir');
+            dirHandle=null;
+            rBody.innerHTML='<div class="rmsg">已清除快取！<br>請關閉此視窗，並重新點擊「📄 完整解析」來重新選擇資料夾。</div>';
+          };
+        });
+      }
       return;
     }
     await waitKatex(4000);
     mathHint.style.display=(window.katex)?'none':'inline-block';
     const today=new Date().toISOString().slice(0,10);
-    rBody.innerHTML=`<div id="printHeader">${esc(title||relPath)}<div class="src">exam-wiki-RC 知識庫 ｜ ${esc(relPath)} ｜ 匯出日期 ${today}</div></div><div class="md">${mdToHtml(text)}</div>`;
+    rBody.innerHTML=`<div id="printHeader">${esc(title||relPath)}<div class="src">exam-wiki-MM 知識庫 ｜ ${esc(relPath)} ｜ 匯出日期 ${today}</div></div><div class="md">${mdToHtml(text)}</div>`;
     rBody.scrollTop=0;
+    // 解析圖片（相對於 .md 所在資料夾）
     const baseDir=relPath.split('/').slice(0,-1).join('/');
-    // 圖片：相對路徑 → 網站 URL
-    rBody.querySelectorAll('img[data-mdsrc]').forEach(img=>{
+    rBody.querySelectorAll('img[data-mdsrc]').forEach(async img=>{
       const p=img.dataset.mdsrc;
       if(/^https?:/.test(p)){img.src=p;return;}
-      img.src=encodeURI(resolvePath(baseDir,p));
-      img.onerror=()=>{img.alt='（找不到圖片：'+p+'）';img.style.minHeight='40px';};
-    });
-    // 其他檔案連結（viz.html、png…）：解析後在新分頁開啟
-    rBody.querySelectorAll('a[data-rel]').forEach(a=>{
-      a.href=encodeURI(resolvePath(baseDir,a.dataset.rel));
-      a.target='_blank';
+      const fullP = baseDir ? baseDir + '/' + decodeURIComponent(p) : decodeURIComponent(p);
+      if(isHttp){
+        img.src = fullP;
+        return;
+      }
+      try{const f=await readFileByPath(fullP);
+        const u=URL.createObjectURL(f);blobUrls.push(u);img.src=u;}
+      catch(e){img.alt='（找不到圖片：'+p+'）';img.style.minHeight='40px';}
     });
     // .md 內部連結 → 閱讀器內開啟
     rBody.querySelectorAll('a[data-mdlink]').forEach(a=>a.addEventListener('click',ev=>{
       ev.preventDefault();
-      openMd(resolvePath(baseDir,a.dataset.mdlink),a.textContent);
-    }));
-    if(updateHash)history.replaceState(null,'','#md='+encodeURIComponent(relPath)+'&t='+encodeURIComponent(title||relPath));
+      let p=decodeURIComponent(a.dataset.mdlink.split('#')[0]);
+      const stack=baseDir?baseDir.split('/'):[];
+      p.split('/').forEach(seg=>{if(seg==='..')stack.pop();else if(seg!=='.')stack.push(seg);});
+      openMd(stack.join('/'),a.textContent);}));
   }
   window.openMd=openMd;
-
-  // ---- 深層連結：index.html#md=wiki/index.md&t=標題 ----
-  (function(){
-    const m=location.hash.match(/^#md=([^&]+)(?:&t=(.*))?$/);
-    if(m){let t='';try{t=m[2]?decodeURIComponent(m[2]):'';}catch(e){}
-      try{openMd(decodeURIComponent(m[1]),t,false);}catch(e){}}
-  })();
 })();
 </script>
 </body>
