@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>MM-2008-4 懸臂梁三角形載重 SFD/BMD</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 20px; }
+  h1 { text-align: center; color: #a0c4ff; font-size: 18px; margin-bottom: 6px; }
+  .subtitle { text-align: center; color: #888; font-size: 13px; margin-bottom: 20px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 1000px; margin: 0 auto; }
+  canvas { border-radius: 8px; background: #16213e; display: block; width: 100%; }
+  .panel { background: #16213e; border-radius: 10px; padding: 14px; }
+  .panel h2 { font-size: 14px; color: #ffd6a5; margin-bottom: 10px; }
+  .result-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .result-table td { padding: 5px 8px; border-bottom: 1px solid #2a2a5e; }
+  .result-table td:first-child { color: #a0c4ff; }
+  .result-table td:last-child { text-align: right; color: #90ee90; font-weight: bold; }
+  .governs { color: #ff8c8c !important; }
+  .legend { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin: 12px 0; font-size: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 2px; }
+  .slider-row { display: flex; align-items: center; gap: 10px; margin: 10px 0; font-size: 13px; }
+  .slider-row input[type=range] { flex: 1; accent-color: #a0c4ff; }
+  .slider-val { color: #ffd6a5; width: 80px; text-align: right; font-weight: bold; }
+  .formula-box { background: #0f3460; border-radius: 6px; padding: 10px; font-size: 12px; line-height: 1.8; }
+  .formula-box .key { color: #a0c4ff; }
+  .formula-box .val { color: #90ee90; font-weight: bold; }
+  .full-width { grid-column: 1 / -1; }
+  .section-diagram { width: 100%; height: 160px; }
+</style>
+</head>
+<body>
+<h1>MM-2008-4｜懸臂梁三角形載重 — 剪力圖與彎矩圖</h1>
+<div class="subtitle">固定端 A（左）∣ 自由端 B（右）∣ 載重：0 at A → q₀ at B</div>
+
+<div class="grid">
+  <!-- Beam diagram -->
+  <div class="panel full-width">
+    <h2>結構示意圖</h2>
+    <canvas id="beamCanvas" height="120"></canvas>
+  </div>
+
+  <!-- SFD -->
+  <div class="panel">
+    <h2>剪力圖 V(x) [kN]</h2>
+    <canvas id="sfdCanvas" height="180"></canvas>
+  </div>
+
+  <!-- BMD -->
+  <div class="panel">
+    <h2>彎矩圖 M(x) [kN·m]（負值 = 上拉）</h2>
+    <canvas id="bmdCanvas" height="180"></canvas>
+  </div>
+
+  <!-- Controls + Results -->
+  <div class="panel">
+    <h2>互動參數</h2>
+    <div class="slider-row">
+      <span>q₀ (kN/m)</span>
+      <input type="range" id="q0slider" min="0.1" max="1.5" step="0.005" value="1.015">
+      <span class="slider-val" id="q0val">1.015</span>
+    </div>
+    <div class="slider-row">
+      <span>L (m)</span>
+      <input type="range" id="Lslider" min="4" max="20" step="0.5" value="12">
+      <span class="slider-val" id="Lval">12.0</span>
+    </div>
+    <br>
+    <table class="result-table">
+      <tr><td>V_max (at A)</td><td id="Vmax">—</td></tr>
+      <tr><td>M_max (at A)</td><td id="Mmax">—</td></tr>
+      <tr><td>σ_max</td><td id="SigMax">—</td></tr>
+      <tr><td>τ_max</td><td id="TauMax">—</td></tr>
+      <tr><td>Controlling check</td><td id="Gov">—</td></tr>
+    </table>
+  </div>
+
+  <!-- Section + Properties -->
+  <div class="panel">
+    <h2>I 形斷面性質</h2>
+    <canvas id="secCanvas" class="section-diagram" height="160"></canvas>
+    <div class="formula-box" style="margin-top:8px;">
+      <div><span class="key">I</span> = (130×240³ − 115×200³)/12 = <span class="val">73.09 × 10⁶ mm⁴</span></div>
+      <div><span class="key">c</span> = 240/2 = <span class="val">120 mm</span></div>
+      <div><span class="key">S</span> = I/c = <span class="val">609,111 mm³</span></div>
+      <div><span class="key">Q_NA</span> = 286,000 + 75,000 = <span class="val">361,000 mm³</span></div>
+    </div>
+  </div>
+
+  <!-- Answer box -->
+  <div class="panel full-width">
+    <h2>容許應力設計結果（σ_w = 80 MPa，τ_w = 60 MPa）</h2>
+    <div class="formula-box">
+      <div><span class="key">彎曲應力控制：</span> q₀ ≤ 3σ_w·I/(c·L²) = 3×80×73.09×10⁶/(120×144×10⁶) = <span class="val">1.015 kN/m</span></div>
+      <div><span class="key">剪應力控制：  </span> q₀ ≤ 2τ_w·I·t_w/(L·Q_NA) = 2×60×73.09×10⁶×15/(12,000×361,000) = <span class="val">30.37 kN/m</span></div>
+      <div style="margin-top:6px;color:#ffd6a5;font-weight:bold;">∴ q₀,max = <span style="color:#ff8c8c;font-size:16px;">1.015 kN/m</span>（彎曲應力控制）</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Cross-section constants
+const I = 73093333; // mm^4
+const c = 120;       // mm
+const Q = 361000;    // mm^3
+const tw = 15;       // mm
+const sigW = 80;     // MPa
+const tauW = 60;     // MPa
+
+// State
+let q0 = 1.015; // kN/m = N/mm
+let L = 12;     // m
+
+function update() {
+  q0 = parseFloat(document.getElementById('q0slider').value);
+  L  = parseFloat(document.getElementById('Lslider').value);
+  document.getElementById('q0val').textContent = q0.toFixed(3);
+  document.getElementById('Lval').textContent  = L.toFixed(1);
+
+  const Lmm = L * 1000; // mm
+  const q0Nmm = q0;     // N/mm
+
+  const Vmax = q0Nmm * Lmm / 2;   // N
+  const Mmax = q0Nmm * Lmm * Lmm / 3; // N·mm
+
+  const sig = Mmax * c / I;        // MPa
+  const tau = Vmax * Q / (I * tw); // MPa
+
+  document.getElementById('Vmax').textContent  = (Vmax/1000).toFixed(2) + ' kN';
+  document.getElementById('Mmax').textContent  = (Mmax/1e6).toFixed(2)  + ' kN·m';
+  document.getElementById('SigMax').textContent = sig.toFixed(2) + ' MPa' + (sig > sigW ? ' ⚠️' : '');
+  document.getElementById('TauMax').textContent = tau.toFixed(3) + ' MPa' + (tau > tauW ? ' ⚠️' : '');
+
+  const sigGov = sig > tauW * (I*tw/Q)/(I*c/Mmax*(Vmax/Mmax));
+  document.getElementById('Gov').textContent = sig > tau ? '彎曲應力 σ' : '剪應力 τ';
+
+  drawBeam();
+  drawSFD();
+  drawBMD();
+  drawSection();
+}
+
+function resizeCanvas(id) {
+  const cvs = document.getElementById(id);
+  cvs.width = cvs.offsetWidth;
+  return cvs;
+}
+
+function drawBeam() {
+  const cvs = resizeCanvas('beamCanvas');
+  const ctx = cvs.getContext('2d');
+  const W = cvs.width, H = cvs.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const lx = 80, rx = W - 40, ty = 40, by = ty + 30;
+  const beamH = by - ty;
+
+  // Wall
+  ctx.fillStyle = '#555';
+  ctx.fillRect(lx - 20, ty - 10, 20, beamH + 20);
+  for (let y = ty - 10; y < by + 15; y += 8) {
+    ctx.beginPath(); ctx.moveTo(lx - 20, y); ctx.lineTo(lx - 30, y + 5);
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 1; ctx.stroke();
+  }
+
+  // Beam
+  ctx.fillStyle = '#3a6bc4';
+  ctx.fillRect(lx, ty, rx - lx, beamH);
+
+  // Labels A B
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif';
+  ctx.fillText('A', lx - 5, ty - 10);
+  ctx.fillText('B', rx - 5, ty - 10);
+
+  // Triangular load arrows (0 at A, q0 at B)
+  const nArrows = 10;
+  const maxArrowH = 30;
+  ctx.strokeStyle = '#ffd6a5'; ctx.fillStyle = '#ffd6a5';
+  for (let i = 0; i <= nArrows; i++) {
+    const xi = lx + (rx - lx) * i / nArrows;
+    const frac = i / nArrows;
+    const arrowH = frac * maxArrowH;
+    if (arrowH > 2) {
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(xi, ty - arrowH);
+      ctx.lineTo(xi, ty);
+      ctx.stroke();
+      // arrowhead
+      ctx.beginPath();
+      ctx.moveTo(xi, ty);
+      ctx.lineTo(xi - 4, ty - 8);
+      ctx.lineTo(xi + 4, ty - 8);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  // Triangle outline
+  ctx.beginPath();
+  ctx.moveTo(lx, ty);
+  ctx.lineTo(rx, ty - maxArrowH);
+  ctx.strokeStyle = '#ffa500'; ctx.lineWidth = 2; ctx.stroke();
+
+  // q0 label
+  ctx.fillStyle = '#ffa500'; ctx.font = '12px sans-serif';
+  ctx.fillText('q₀', rx + 4, ty - maxArrowH + 5);
+
+  // L dimension
+  ctx.fillStyle = '#aaa'; ctx.font = '11px sans-serif';
+  ctx.fillText('L = ' + L.toFixed(1) + ' m', (lx + rx) / 2 - 20, by + 22);
+  ctx.beginPath(); ctx.moveTo(lx, by + 14); ctx.lineTo(rx, by + 14);
+  ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1; ctx.stroke();
+}
+
+function drawSFD() {
+  const cvs = resizeCanvas('sfdCanvas');
+  const ctx = cvs.getContext('2d');
+  const W = cvs.width, H = cvs.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { l: 55, r: 20, t: 15, b: 25 };
+  const pw = W - pad.l - pad.r, ph = H - pad.t - pad.b;
+  const lx = pad.l, ry = pad.t + ph;
+
+  const Lmm = L * 1000;
+  const Vmax = q0 * Lmm / 2 / 1000; // kN
+  const scale = ph / (Vmax * 1.15 || 1);
+
+  // Zero line
+  ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(lx, ry); ctx.lineTo(lx + pw, ry); ctx.stroke();
+
+  // SFD: V(x) = q0*(L^2 - x^2)/(2L) — parabola (positive = upward on left face)
+  ctx.beginPath();
+  ctx.moveTo(lx, ry - Vmax * scale);
+  const nPts = 100;
+  for (let i = 0; i <= nPts; i++) {
+    const t = i / nPts; // t = x/L
+    const Vt = Vmax * (1 - t * t); // kN: V(x)=Vmax*(1-(x/L)^2)
+    ctx.lineTo(lx + pw * t, ry - Vt * scale);
+  }
+  ctx.lineTo(lx + pw, ry);
+  ctx.lineTo(lx, ry);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(100,200,255,0.25)'; ctx.fill();
+  ctx.strokeStyle = '#64c8ff'; ctx.lineWidth = 2; ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = '#64c8ff'; ctx.font = 'bold 11px sans-serif';
+  ctx.fillText(Vmax.toFixed(1) + ' kN', lx + 4, ry - Vmax * scale + 12);
+  ctx.fillStyle = '#aaa'; ctx.font = '10px sans-serif';
+  ctx.fillText('A', lx - 8, ry + 14); ctx.fillText('B', lx + pw - 5, ry + 14);
+
+  // Y axis
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(lx, pad.t); ctx.lineTo(lx, ry + 5); ctx.stroke();
+  ctx.fillStyle = '#aaa'; ctx.font = '10px sans-serif'; ctx.fillText('V', lx - 12, pad.t + 12);
+
+  // Parabola label
+  ctx.fillStyle = '#64c8ff'; ctx.font = '10px sans-serif';
+  ctx.fillText('q₀L/2', lx + 4, ry - Vmax * scale - 4);
+  ctx.fillText('(拋物線)', lx + pw * 0.35, ry - Vmax * 0.5 * scale);
+}
+
+function drawBMD() {
+  const cvs = resizeCanvas('bmdCanvas');
+  const ctx = cvs.getContext('2d');
+  const W = cvs.width, H = cvs.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { l: 65, r: 20, t: 30, b: 20 };
+  const pw = W - pad.l - pad.r, ph = H - pad.t - pad.b;
+  const lx = pad.l, ty = pad.t;
+
+  const Lmm = L * 1000;
+  const Mmax = q0 * Lmm * Lmm / 3 / 1e6; // kN·m
+  const scale = (ph * 0.85) / (Mmax || 1);
+
+  // Zero line at bottom
+  const zy = ty + ph;
+  ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(lx, zy); ctx.lineTo(lx + pw, zy); ctx.stroke();
+
+  // BMD: M(x) = Mmax*(2-(x/L)^3*something)... use exact
+  // M(x) = q0/(6L) * [2L^3 - 3xL^2 + x^3] (magnitude, hogging)
+  // = Mmax * [2 - 3t + t^3] / 2  where t = x/L
+  // Check: at t=0, [2-0+0]/2 = 1 → Mmax ✓; at t=1, [2-3+1]/2 = 0 ✓
+  ctx.beginPath();
+  ctx.moveTo(lx, zy - Mmax * scale);
+  for (let i = 0; i <= 100; i++) {
+    const t = i / 100;
+    const Mt = Mmax * (2 - 3 * t + t * t * t) / 2; // kN·m
+    ctx.lineTo(lx + pw * t, zy - Mt * scale);
+  }
+  ctx.lineTo(lx + pw, zy);
+  ctx.lineTo(lx, zy);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,140,180,0.25)'; ctx.fill();
+  ctx.strokeStyle = '#ff8cb4'; ctx.lineWidth = 2; ctx.stroke();
+
+  // Allowable moment line
+  const Mallow = sigW * I * 1e-6 / c; // kN·m (with I in mm^4, c in mm → N·mm → /1e6 → kN·m)
+  const Mallow_kNm = sigW * I / c / 1e6;
+  const Mallowy = zy - Mallow_kNm * scale;
+  if (Mallowy > ty) {
+    ctx.setLineDash([5, 3]);
+    ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(lx, Mallowy); ctx.lineTo(lx + pw * 0.3, Mallowy); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#ffd700'; ctx.font = '10px sans-serif';
+    ctx.fillText('M_allow=' + Mallow_kNm.toFixed(1) + ' kN·m', lx + 4, Mallowy - 3);
+  }
+
+  // Labels
+  ctx.fillStyle = '#ff8cb4'; ctx.font = 'bold 11px sans-serif';
+  ctx.fillText(Mmax.toFixed(1) + ' kN·m', lx + 4, zy - Mmax * scale - 4);
+  ctx.fillStyle = '#aaa'; ctx.font = '10px sans-serif';
+  ctx.fillText('A', lx - 8, zy + 12); ctx.fillText('B', lx + pw - 5, zy + 12);
+
+  // Y axis
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(lx, ty); ctx.lineTo(lx, zy + 5); ctx.stroke();
+  ctx.save(); ctx.translate(lx - 22, ty + ph / 2); ctx.rotate(-Math.PI / 2);
+  ctx.fillStyle = '#aaa'; ctx.font = '10px sans-serif'; ctx.fillText('M (hog)', -18, 0);
+  ctx.restore();
+
+  ctx.fillStyle = '#ff8cb4'; ctx.font = '10px sans-serif';
+  ctx.fillText('q₀L²/3', lx + 2, zy - Mmax * scale + 14);
+  ctx.fillText('(三次曲線)', lx + pw * 0.4, zy - Mmax * 0.3 * scale);
+}
+
+function drawSection() {
+  const cvs = resizeCanvas('secCanvas');
+  const ctx = cvs.getContext('2d');
+  const W = cvs.width, H = cvs.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // Section dims in mm: bf=130, tf=20, hw=200, tw=15, H=240
+  const bf = 130, tf = 20, hw = 200, twS = 15, HH = 240;
+  const sc = Math.min((W - 80) / bf, (H - 20) / HH) * 0.9;
+  const cx = W * 0.35, cy = H / 2;
+
+  // Draw I-section
+  ctx.fillStyle = '#3a6bc4';
+  // Bottom flange
+  ctx.fillRect(cx - bf*sc/2, cy + hw*sc/2, bf*sc, tf*sc);
+  // Top flange
+  ctx.fillRect(cx - bf*sc/2, cy - hw*sc/2 - tf*sc, bf*sc, tf*sc);
+  // Web
+  ctx.fillRect(cx - twS*sc/2, cy - hw*sc/2, twS*sc, hw*sc);
+
+  // Neutral axis
+  ctx.setLineDash([4, 3]);
+  ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(cx - bf*sc*0.6, cy); ctx.lineTo(cx + bf*sc*0.6, cy); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#ffd700'; ctx.font = '10px sans-serif';
+  ctx.fillText('N.A.', cx + bf*sc*0.5 + 3, cy + 4);
+
+  // Dimensions
+  ctx.fillStyle = '#aaa'; ctx.font = '10px sans-serif'; ctx.strokeStyle = '#aaa'; ctx.lineWidth = 0.8;
+  const rx = cx + bf*sc/2 + 10;
+  // H=240
+  ctx.fillText('H=240', rx + 2, cy);
+  ctx.beginPath(); ctx.moveTo(rx, cy - HH*sc/2); ctx.lineTo(rx, cy + HH*sc/2); ctx.stroke();
+  const bx = cx;
+  ctx.fillText('b_f=130', bx - 20, cy + HH*sc/2 + 18);
+  ctx.fillText('t_w=15', cx + twS*sc/2 + 3, cy - 5);
+  ctx.fillText('t_f=20', cx - bf*sc/2 - 38, cy - hw*sc/2 - tf*sc/2 + 4);
+  ctx.fillText('h_w=200', cx - bf*sc/2 - 52, cy + 4);
+
+  // Q area highlight (above NA)
+  ctx.fillStyle = 'rgba(255,140,180,0.3)';
+  ctx.fillRect(cx - bf*sc/2, cy - hw*sc/2 - tf*sc, bf*sc, tf*sc); // top flange
+  ctx.fillRect(cx - twS*sc/2, cy - hw*sc/2, twS*sc, hw*sc/2);      // upper web half
+  ctx.fillStyle = '#ff8cb4'; ctx.font = '10px sans-serif';
+  ctx.fillText('Q_NA area', cx + bf*sc*0.55, cy - hw*sc/4);
+}
+
+// Init
+window.addEventListener('load', () => {
+  // Resize all canvases first
+  ['beamCanvas','sfdCanvas','bmdCanvas','secCanvas'].forEach(id => {
+    const cvs = document.getElementById(id);
+    cvs.width = cvs.offsetWidth;
+  });
+  update();
+});
+
+document.getElementById('q0slider').addEventListener('input', update);
+document.getElementById('Lslider').addEventListener('input', update);
+window.addEventListener('resize', () => {
+  ['beamCanvas','sfdCanvas','bmdCanvas','secCanvas'].forEach(id => {
+    const cvs = document.getElementById(id);
+    cvs.width = cvs.offsetWidth;
+  });
+  update();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>MM-2025-1 等肢角鋼斷面性質互動圖</title>
+<style>
+  body{font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif;background:#fafafa;margin:0;padding:10px;width:580px}
+  h3{margin:4px 0 8px;font-size:1rem}
+  .panel{background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px;margin-bottom:8px}
+  canvas{display:block;background:#fff}
+  .row{display:flex;align-items:center;gap:8px;font-size:.85rem;margin:6px 0}
+  input[type=range]{flex:1}
+  table{border-collapse:collapse;font-size:.8rem;width:100%}
+  td,th{border:1px solid #ddd;padding:3px 6px;text-align:right}
+  th{background:#f1f5f9}
+  .note{font-size:.75rem;color:#666;margin-top:4px}
+</style>
+</head>
+<body>
+<h3>MM-2025-1　等肢角鋼 L150×150×15：形心・主軸・慣性矩轉換</h3>
+<div class="panel">
+  <canvas id="cv" width="560" height="360"></canvas>
+  <div class="row"><span>旋轉角 θ：</span><input type="range" id="th" min="-90" max="90" value="0" step="1"><span id="thv" style="width:48px">0°</span></div>
+  <table>
+    <tr><th>θ</th><th>I<sub>x'x'</sub> (mm⁴)</th><th>I<sub>y'y'</sub> (mm⁴)</th><th>I<sub>x'y'</sub> (mm⁴)</th></tr>
+    <tr><td id="tth">0°</td><td id="ix"></td><td id="iy"></td><td id="ixy"></td></tr>
+  </table>
+  <div class="note">固定值：A = 4275 mm²｜C<sub>x</sub> = C<sub>y</sub> = 43.03 mm｜I<sub>xx</sub> = I<sub>yy</sub> = 9.113×10⁶｜I<sub>xy</sub> = −5.396×10⁶｜I<sub>max</sub> = 1.451×10⁷ @ θ=45°｜I<sub>min</sub> = 3.717×10⁶ @ θ=135°（單位 mm⁴）。拖曳滑桿觀察 θ=±45° 時 I<sub>x'y'</sub>=0。</div>
+</div>
+<script>
+(function(){
+const L=150,t=15,C=43.026;
+const Ix0=9112721, Iy0=9112721, Ixy0=-5395560;
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const sc=1.5, ox=200, oy=300; // 畫布座標：原點=角鋼左下角
+function X(x){return ox+x*sc} function Y(y){return oy-y*sc}
+function draw(th){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  // 斷面
+  ctx.fillStyle='#cfe3f7';ctx.strokeStyle='#3b82f6';ctx.lineWidth=1.5;
+  ctx.beginPath();
+  ctx.moveTo(X(0),Y(0));ctx.lineTo(X(L),Y(0));ctx.lineTo(X(L),Y(t));ctx.lineTo(X(t),Y(t));ctx.lineTo(X(t),Y(L));ctx.lineTo(X(0),Y(L));ctx.closePath();
+  ctx.fill();ctx.stroke();
+  // 分割線
+  ctx.strokeStyle='#94a3b8';ctx.setLineDash([4,3]);
+  ctx.beginPath();ctx.moveTo(X(t),Y(0));ctx.lineTo(X(t),Y(t));ctx.stroke();ctx.setLineDash([]);
+  // 形心
+  const cx=X(C),cy=Y(C);
+  ctx.fillStyle='#dc2626';ctx.beginPath();ctx.arc(cx,cy,4,0,7);ctx.fill();
+  ctx.fillStyle='#dc2626';ctx.font='12px sans-serif';ctx.fillText('G.C. (43.0, 43.0)',cx+8,cy-8);
+  // x-y 軸（形心）
+  ctx.strokeStyle='#475569';ctx.lineWidth=1;
+  arrow(cx,cy,cx+90,cy);label('x',cx+94,cy+4,'#475569');
+  arrow(cx,cy,cx,cy-90);label('y',cx-4,cy-96,'#475569');
+  // x'-y' 旋轉軸
+  const r=th*Math.PI/180;
+  ctx.strokeStyle='#d97706';ctx.lineWidth=1.6;
+  arrow(cx,cy,cx+110*Math.cos(r),cy-110*Math.sin(r));label("x'",cx+118*Math.cos(r),cy-118*Math.sin(r),'#d97706');
+  arrow(cx,cy,cx-110*Math.sin(r),cy-110*Math.cos(r));label("y'",cx-120*Math.sin(r),cy-120*Math.cos(r),'#d97706');
+  // 主軸（45°，虛線）
+  ctx.strokeStyle='#059669';ctx.setLineDash([6,4]);ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.moveTo(cx-85,cy+85);ctx.lineTo(cx+85,cy-85);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx-85,cy-85);ctx.lineTo(cx+85,cy+85);ctx.stroke();ctx.setLineDash([]);
+  label('主軸 Imax @45°',cx+62,cy-72,'#059669');
+  label('Imin @135°',cx-118,cy-66,'#059669');
+  // 尺寸標註
+  ctx.fillStyle='#334155';ctx.font='11px sans-serif';
+  ctx.fillText('L=150',X(70),Y(-8));ctx.fillText('t=15',X(L)+4,Y(t/2)+4);ctx.fillText('L=150',X(-32),Y(70));
+  function arrow(x1,y1,x2,y2){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    const a=Math.atan2(y2-y1,x2-x1);ctx.beginPath();ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-7*Math.cos(a-.4),y2-7*Math.sin(a-.4));ctx.lineTo(x2-7*Math.cos(a+.4),y2-7*Math.sin(a+.4));ctx.closePath();ctx.fill();}
+  function label(s,x,y,c){ctx.fillStyle=c;ctx.font='12px sans-serif';ctx.fillText(s,x,y);}
+}
+function update(){
+  const th=+document.getElementById('th').value;
+  document.getElementById('thv').textContent=th+'°';
+  document.getElementById('tth').textContent=th+'°';
+  const r=2*th*Math.PI/180, c=Math.cos(r), s=Math.sin(r);
+  const avg=(Ix0+Iy0)/2, dif=(Ix0-Iy0)/2;
+  const ix=avg+dif*c-Ixy0*s, iy=avg-dif*c+Ixy0*s, ixy=dif*s+Ixy0*c;
+  document.getElementById('ix').textContent=ix.toExponential(3);
+  document.getElementById('iy').textContent=iy.toExponential(3);
+  document.getElementById('ixy').textContent=Math.abs(ixy)<1?'0':ixy.toExponential(3);
+  draw(th);
+}
+document.getElementById('th').addEventListener('input',update);
+update();
+})();
+</script>
+</body>
+</html>

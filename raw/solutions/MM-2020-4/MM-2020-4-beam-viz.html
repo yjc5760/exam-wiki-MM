@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>MM-2020-4 連續梁撓度分析</title>
+<style>
+  body { font-family: "Noto Sans TC", sans-serif; background:#f8f8f8; margin:0; padding:12px; }
+  .container { max-width:640px; margin:0 auto; background:#fff; border-radius:8px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.12); }
+  h3 { font-size:15px; margin:0 0 4px 0; color:#333; text-align:center; }
+  .subtitle { font-size:11px; color:#666; text-align:center; margin-bottom:10px; }
+  canvas { display:block; margin:0 auto; }
+  .result-box { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .result-item { flex:1; min-width:130px; background:#eef3ff; border-radius:4px; padding:8px; font-size:11px; text-align:center; }
+  .result-value { font-size:13px; font-weight:bold; color:#1a56db; margin-top:2px; }
+  .result-value.up { color:#27ae60; }
+  .result-value.down { color:#e74c3c; }
+  .note { font-size:10.5px; color:#555; margin-top:10px; background:#f3f3f3; padding:8px; border-radius:4px; line-height:1.7; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h3>MM-2020-4｜四支點連續梁撓度（三彎矩方程）</h3>
+  <p class="subtitle">EI 均勻，P 作用於第二跨中點（x = 3L/2）</p>
+  <canvas id="c" width="620" height="420"></canvas>
+  <div class="result-box">
+    <div class="result-item">M₂ = M₃（支點彎矩）<div class="result-value">−3PL/40</div></div>
+    <div class="result-item">R₁ = R₄（外端反力）<div class="result-value down">−3P/40（向下）</div></div>
+    <div class="result-item">δ_A（跨1最大）<div class="result-value up">√3PL³/(360EI)↑</div></div>
+    <div class="result-item">δ_B（跨2最大）<div class="result-value down">11PL³/(960EI)↓</div></div>
+  </div>
+  <div class="note">
+    <b>A 點位置：</b> x = L/√3 ≈ 0.577L（非跨中），撓度朝上（外端被提起）。<br>
+    <b>B 點位置：</b> x = 3L/2（跨2中點 = P 施加點），撓度朝下。<br>
+    <b>連續梁效果：</b> 跨2撓度約為同跨單跨簡支的 55%（11/960 ÷ 1/48 = 11/20）。
+  </div>
+</div>
+<script>
+const W = 620, H = 420;
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+// Layout
+const PAD = 40;
+const beamY = 160; // y position of the beam line
+const L_px = (W - 2*PAD) / 3; // pixels per span
+const x0 = PAD; // left support x
+
+// Supports: 1(0), 2(L), 3(2L), 4(3L)
+const supports = [0, L_px, 2*L_px, 3*L_px].map(d => x0 + d);
+
+// Scale for diagrams
+const dispScale = 120; // pixels per unit (PL³/EI)
+const momentScale = 100 / (3/40); // pixels per (PL) unit
+
+// Dimensionless deflection functions
+function y1(t) { // t = x/L, span 1
+  return (1/80) * t * (1 - t*t); // P=1, L=1, EI=1
+}
+function y2L(t) { // t = xi/L, span 2, left half (0 <= t <= 0.5)
+  // EIy = -3PL*xi^2/80 + P*xi^3/12 - PL^2*xi/40
+  // normalize by PL^3: y/(PL^3/EI) = -3t^2/80 + t^3/12 - t/40
+  return -3*t*t/80 + t*t*t/12 - t/40;
+}
+function y2R(t) { // t = xi/L, span 2, right half (0.5 <= t <= 1)
+  // EIy = 17PL*xi^2/80 - P*xi^3/12 - 3PL^2*xi/20 + PL^3/48
+  return 17*t*t/80 - t*t*t/12 - 3*t/20 + 1/48;
+}
+function y3(t) { // t = (x-2L)/L, span 3 (by symmetry = y1 mirrored)
+  return y1(t); // same shape as span 1 (upward)
+}
+
+// Bending moment diagram functions (dimensionless, M/(PL))
+function M1(t) { return -3*t/40; }      // span 1
+function M2(t) { // span 2, t from left support (support 2)
+  if (t <= 0.5) return -3/40 + t/2;
+  else return 17/40 - t/2;
+}
+function M3(t) { return -3*(1-t)/40; } // span 3 (by symmetry, t from support 3)
+
+ctx.clearRect(0, 0, W, H);
+
+// --- Draw beam ---
+ctx.strokeStyle = '#888'; ctx.lineWidth = 2;
+ctx.beginPath(); ctx.moveTo(supports[0], beamY); ctx.lineTo(supports[3], beamY); ctx.stroke();
+
+// Draw supports
+supports.forEach((sx, i) => {
+  if (i === 0) {
+    // Pin support (triangle)
+    ctx.beginPath();
+    ctx.moveTo(sx, beamY);
+    ctx.lineTo(sx-10, beamY+20);
+    ctx.lineTo(sx+10, beamY+20);
+    ctx.closePath();
+    ctx.fillStyle = '#888'; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(sx-14, beamY+22); ctx.lineTo(sx+14, beamY+22); ctx.stroke();
+  } else {
+    // Roller support (circle)
+    ctx.beginPath(); ctx.arc(sx, beamY+10, 6, 0, 2*Math.PI);
+    ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx-10, beamY+18); ctx.lineTo(sx+10, beamY+18); ctx.stroke();
+  }
+});
+
+// Support labels
+const supLabels = ['1(鉸)', '2', '3', '4'];
+supports.forEach((sx, i) => {
+  ctx.fillStyle = '#666'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(supLabels[i], sx, beamY + 35);
+});
+
+// Span labels
+const spanLabels = ['L', 'L', 'L'];
+for (let i = 0; i < 3; i++) {
+  const midX = (supports[i] + supports[i+1]) / 2;
+  ctx.fillStyle = '#aaa'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(spanLabels[i], midX, beamY + 50);
+}
+
+// Load P
+const Px = supports[1] + L_px / 2; // at x = 3L/2 = midpoint of span 2
+ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2.5;
+ctx.beginPath(); ctx.moveTo(Px, beamY - 60); ctx.lineTo(Px, beamY - 5); ctx.stroke();
+ctx.fillStyle = '#e67e22';
+ctx.beginPath(); ctx.moveTo(Px, beamY); ctx.lineTo(Px-8, beamY-15); ctx.lineTo(Px+8, beamY-15); ctx.closePath(); ctx.fill();
+ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+ctx.fillText('P', Px, beamY - 65);
+ctx.font = '9px sans-serif'; ctx.fillText('x = 3L/2', Px, beamY - 75);
+
+// B label on beam
+ctx.fillStyle = '#e74c3c';
+ctx.beginPath(); ctx.arc(Px, beamY, 4, 0, 2*Math.PI); ctx.fill();
+ctx.fillText('B', Px + 8, beamY - 5);
+
+// A label (at x = L/sqrt(3) ≈ 0.577L from support 1)
+const Ax = supports[0] + L_px / Math.sqrt(3);
+ctx.fillStyle = '#27ae60';
+ctx.beginPath(); ctx.arc(Ax, beamY, 4, 0, 2*Math.PI); ctx.fill();
+ctx.font = '9px sans-serif';
+ctx.fillText('A(L/√3)', Ax, beamY - 8);
+
+// --- Draw deflection diagram (below beam) ---
+const dispY0 = beamY + 70; // zero line for deflection
+ctx.fillStyle = '#aaa'; ctx.font = '9px sans-serif'; ctx.textAlign = 'left';
+ctx.fillText('撓度圖（誇大）', PAD, dispY0 - 8);
+
+// Zero line
+ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1;
+ctx.beginPath(); ctx.moveTo(supports[0], dispY0); ctx.lineTo(supports[3], dispY0); ctx.stroke();
+
+const N = 60; // number of points
+const pts = [];
+
+// Span 1
+for (let i = 0; i <= N; i++) {
+  const t = i / N;
+  const x = supports[0] + t * L_px;
+  const y = y1(t) * dispScale * 40; // scale factor
+  pts.push({ x, y: -y, span: 1 }); // negative = upward = drawn above line
+}
+// Span 2 (left half)
+for (let i = 0; i <= N/2; i++) {
+  const t = i / N;
+  const x = supports[1] + t * L_px;
+  const y = y2L(t) * dispScale * 40;
+  pts.push({ x, y: -y, span: 2 });
+}
+// Span 2 (right half)
+for (let i = N/2; i <= N; i++) {
+  const t = i / N;
+  const x = supports[1] + t * L_px;
+  const y = y2R(t) * dispScale * 40;
+  pts.push({ x, y: -y, span: 2 });
+}
+// Span 3
+for (let i = 0; i <= N; i++) {
+  const t = i / N;
+  const x = supports[2] + t * L_px;
+  const y = y3(t) * dispScale * 40;
+  pts.push({ x, y: -y, span: 3 });
+}
+
+// Draw deflection curve
+ctx.beginPath();
+pts.forEach((p, i) => {
+  if (i === 0) ctx.moveTo(p.x, dispY0 + p.y);
+  else ctx.lineTo(p.x, dispY0 + p.y);
+});
+ctx.strokeStyle = '#2980b9'; ctx.lineWidth = 2;
+ctx.stroke();
+
+// Fill areas
+// Span 1+3 (upward = above line)
+ctx.beginPath();
+ctx.moveTo(supports[0], dispY0);
+for (let i = 0; i <= N; i++) {
+  const t = i/N;
+  const x = supports[0] + t*L_px;
+  const y = y1(t) * dispScale * 40;
+  ctx.lineTo(x, dispY0 - y);
+}
+ctx.lineTo(supports[1], dispY0);
+ctx.closePath();
+ctx.fillStyle = 'rgba(39,174,96,0.15)'; ctx.fill();
+
+ctx.beginPath();
+ctx.moveTo(supports[2], dispY0);
+for (let i = 0; i <= N; i++) {
+  const t = i/N;
+  const x = supports[2] + t*L_px;
+  const y = y3(t) * dispScale * 40;
+  ctx.lineTo(x, dispY0 - y);
+}
+ctx.lineTo(supports[3], dispY0);
+ctx.closePath();
+ctx.fillStyle = 'rgba(39,174,96,0.15)'; ctx.fill();
+
+// Span 2 (downward = below line)
+ctx.beginPath();
+ctx.moveTo(supports[1], dispY0);
+for (let i = 0; i <= N/2; i++) {
+  const t = i/N;
+  const x = supports[1] + t*L_px;
+  const y = y2L(t) * dispScale * 40;
+  ctx.lineTo(x, dispY0 - y);
+}
+for (let i = N/2; i <= N; i++) {
+  const t = i/N;
+  const x = supports[1] + t*L_px;
+  const y = y2R(t) * dispScale * 40;
+  ctx.lineTo(x, dispY0 - y);
+}
+ctx.lineTo(supports[2], dispY0);
+ctx.closePath();
+ctx.fillStyle = 'rgba(231,76,60,0.15)'; ctx.fill();
+
+// Key point annotations
+const dA = y1(1/Math.sqrt(3)) * dispScale * 40;
+ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 1; ctx.setLineDash([2,2]);
+ctx.beginPath(); ctx.moveTo(Ax, dispY0 - dA); ctx.lineTo(Ax, dispY0); ctx.stroke();
+ctx.setLineDash([]);
+ctx.fillStyle = '#27ae60'; ctx.font = '9px sans-serif'; ctx.textAlign = 'left';
+ctx.fillText('δ_A↑ = √3PL³/360EI', Ax + 3, dispY0 - dA - 4);
+
+const dB = y2L(0.5) * dispScale * 40;
+ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 1; ctx.setLineDash([2,2]);
+ctx.beginPath(); ctx.moveTo(Px, dispY0); ctx.lineTo(Px, dispY0 - dB); ctx.stroke();
+ctx.setLineDash([]);
+ctx.fillStyle = '#e74c3c'; ctx.textAlign = 'left';
+ctx.fillText('δ_B↓ = 11PL³/960EI', Px + 4, dispY0 - dB + 14);
+
+// --- Draw moment diagram (below deflection) ---
+const momY0 = H - 55; // zero line
+ctx.fillStyle = '#aaa'; ctx.font = '9px sans-serif'; ctx.textAlign = 'left';
+ctx.fillText('彎矩圖 M(x)', PAD, momY0 - 8);
+
+ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1;
+ctx.beginPath(); ctx.moveTo(supports[0], momY0); ctx.lineTo(supports[3], momY0); ctx.stroke();
+
+const momScale2 = 60 / (7/40); // px per (PL)
+
+// Draw moment diagram
+ctx.beginPath();
+// Span 1 (linear from 0 to -3PL/40)
+ctx.moveTo(supports[0], momY0);
+for (let i = 0; i <= N; i++) {
+  const t = i/N;
+  const x = supports[0] + t*L_px;
+  const m = M1(t);
+  ctx.lineTo(x, momY0 - m * momScale2);
+}
+// Span 2
+for (let i = 0; i <= N; i++) {
+  const t = i/N;
+  const x = supports[1] + t*L_px;
+  const m = M2(t);
+  ctx.lineTo(x, momY0 - m * momScale2);
+}
+// Span 3
+for (let i = 0; i <= N; i++) {
+  const t = i/N;
+  const x = supports[2] + t*L_px;
+  const m = M3(t);
+  ctx.lineTo(x, momY0 - m * momScale2);
+}
+ctx.strokeStyle = '#8e44ad'; ctx.lineWidth = 2; ctx.stroke();
+
+// Fill moment diagram
+ctx.beginPath();
+ctx.moveTo(supports[0], momY0);
+for (let i = 0; i <= N; i++) {
+  const t = i/N; const x = supports[0]+t*L_px;
+  ctx.lineTo(x, momY0 - M1(t)*momScale2);
+}
+for (let i = 0; i <= N; i++) {
+  const t = i/N; const x = supports[1]+t*L_px;
+  ctx.lineTo(x, momY0 - M2(t)*momScale2);
+}
+for (let i = 0; i <= N; i++) {
+  const t = i/N; const x = supports[2]+t*L_px;
+  ctx.lineTo(x, momY0 - M3(t)*momScale2);
+}
+ctx.lineTo(supports[3], momY0);
+ctx.closePath();
+ctx.fillStyle = 'rgba(142,68,173,0.12)'; ctx.fill();
+
+// Labels on moment diagram
+ctx.fillStyle = '#8e44ad'; ctx.font = '9px sans-serif';
+ctx.textAlign = 'right';
+ctx.fillText('−3PL/40', supports[1] - 3, momY0 + 3*momScale2/40 + 4);
+const Bm_x = supports[1] + L_px/2;
+ctx.textAlign = 'center';
+ctx.fillText('+7PL/40', Bm_x, momY0 - 7*momScale2/40 - 4);
+
+// Axes labels
+ctx.fillStyle = '#666'; ctx.font = '9px sans-serif'; ctx.textAlign = 'left';
+ctx.fillText('(+ve 下拉)', supports[3] - 80, momY0 + 12);
+</script>
+</body>
+</html>

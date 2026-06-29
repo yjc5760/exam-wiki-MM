@@ -1,258 +1,359 @@
 {
-  "description": "RC 科目核心概念定義。供 compile-all 生成 wiki/concepts/ 頁面。",
+  "description": "MM 科目核心概念定義。供 compile-all 生成 wiki/concepts/ 頁面。科目：材料力學（Mechanics of Materials）。",
   "concepts": [
     {
-      "concept_id": "BALANCED-REINFORCEMENT-RATIO",
-      "concept_name": "平衡鋼筋比 ρb",
-      "classification": "RC-U1-1",
+      "concept_id": "CENTROID-CALCULATION",
+      "concept_name": "形心計算",
+      "classification": "MM-U1-1",
       "related_concept_ids": [
-        "WHITNEY-STRESS-BLOCK",
-        "DUCTILE-FAILURE"
+        "MOMENT-OF-INERTIA",
+        "PARALLEL-AXIS-THEOREM"
       ],
-      "key_formula": "ρb = 0.85·β1·f'c/fy · 6120/(6120+fy)",
-      "description": "使混凝土壓碎與鋼筋降伏同時發生的鋼筋比，為延性設計的關鍵參考值"
+      "key_formula": "ȳ = ΣAᵢyᵢ / ΣAᵢ；x̄ = ΣAᵢxᵢ / ΣAᵢ",
+      "description": "複合截面形心位置的計算，以各子截面面積加權平均座標，是所有應力/撓度計算的前提"
     },
     {
-      "concept_id": "WHITNEY-STRESS-BLOCK",
-      "concept_name": "Whitney 等值矩形應力塊",
-      "classification": "RC-U1-1",
+      "concept_id": "MOMENT-OF-INERTIA",
+      "concept_name": "慣性矩 I",
+      "classification": "MM-U1-1",
       "related_concept_ids": [
-        "BALANCED-REINFORCEMENT-RATIO",
-        "BETA1-FACTOR"
+        "CENTROID-CALCULATION",
+        "PARALLEL-AXIS-THEOREM",
+        "FLEXURAL-STRESS"
       ],
-      "key_formula": "a = As·fy/(0.85·f'c·b)；Mn = As·fy·(d - a/2)",
-      "description": "以等效矩形應力分布取代混凝土非線性應力分布，是 USD 法的基礎工具"
+      "key_formula": "I_z = ∫y² dA；矩形：I = bh³/12；圓形：I = πd⁴/64",
+      "description": "截面對中性軸的面積二次矩，反映截面抵抗彎曲的能力，是彎曲應力和撓度計算的核心幾何量"
     },
     {
-      "concept_id": "BETA1-FACTOR",
-      "concept_name": "β1 係數（應力塊深度折減）",
-      "classification": "RC-U1-1",
+      "concept_id": "PARALLEL-AXIS-THEOREM",
+      "concept_name": "平行軸定理",
+      "classification": "MM-U1-1",
       "related_concept_ids": [
-        "WHITNEY-STRESS-BLOCK"
+        "CENTROID-CALCULATION",
+        "MOMENT-OF-INERTIA"
       ],
-      "key_formula": "f'c≤280 → β1=0.85；每增加70 kgf/cm² 減0.05，最小0.65",
-      "description": "將等值矩形應力塊深度 a 與中性軸深度 c 聯繫的折減係數"
+      "key_formula": "I = I₀ + A·d²（I₀ = 對本身形心軸的慣性矩；d = 兩平行軸間距）",
+      "description": "將子截面對自身形心軸的慣性矩，換算為對複合截面形心軸的慣性矩，是組合截面計算的基本工具"
     },
     {
-      "concept_id": "PM-INTERACTION-DIAGRAM",
-      "concept_name": "P-M 互制圖",
-      "classification": "RC-U1-2",
+      "concept_id": "POLAR-MOMENT-OF-INERTIA",
+      "concept_name": "極慣性矩 J",
+      "classification": "MM-U1-1",
       "related_concept_ids": [
-        "BALANCED-POINT",
-        "LONG-COLUMN-MOMENT-MAGNIFIER"
+        "MOMENT-OF-INERTIA",
+        "TORSIONAL-SHEAR-STRESS"
       ],
-      "key_formula": "各控制點（純壓/平衡點/純彎）連線構成互制曲線",
-      "description": "柱設計核心工具，顯示軸力與彎矩的組合容量，判斷設計點是否在安全範圍內"
+      "key_formula": "J = I_y + I_z；圓形：J = πd⁴/32；空心圓：J = π(d_o⁴-d_i⁴)/32",
+      "description": "截面對形心的面積極二次矩，等於兩正交慣性矩之和，是扭轉應力和扭轉角計算的核心幾何量"
     },
     {
-      "concept_id": "BALANCED-POINT",
-      "concept_name": "平衡點（柱 P-M 圖）",
-      "classification": "RC-U1-2",
+      "concept_id": "HOOKES-LAW",
+      "concept_name": "虎克定律（Hooke's Law）",
+      "classification": "MM-U1-2",
       "related_concept_ids": [
-        "PM-INTERACTION-DIAGRAM",
-        "BALANCED-REINFORCEMENT-RATIO"
+        "POISSON-RATIO",
+        "ELASTIC-MODULUS",
+        "GENERALIZED-HOOKES-LAW"
       ],
-      "key_formula": "cb = 6120/(6120+fy)·d；Pb = 0.85f'c·β1·cb·b + Cs - T",
-      "description": "P-M 互制圖上拉力鋼筋恰好達到降伏應變的點，是壓力/拉力控制區域的分界"
+      "key_formula": "σ = Eε（正向）；τ = Gγ（剪力）；G = E / (2(1+ν))",
+      "description": "彈性範圍內應力與應變的線性比例關係，是所有彈性分析的物理基礎"
     },
     {
-      "concept_id": "EFFECTIVE-MOMENT-OF-INERTIA",
-      "concept_name": "有效慣性矩 Ie（ACI 方法）",
-      "classification": "RC-U3-1",
+      "concept_id": "POISSON-RATIO",
+      "concept_name": "泊松比 ν（Poisson's Ratio）",
+      "classification": "MM-U1-2",
       "related_concept_ids": [
-        "CRACKING-MOMENT",
-        "LONG-TERM-DEFLECTION"
+        "HOOKES-LAW",
+        "GENERALIZED-HOOKES-LAW"
       ],
-      "key_formula": "Ie = (Mcr/Ma)³·Ig + [1-(Mcr/Ma)³]·Icr ≤ Ig",
-      "description": "考慮混凝土開裂後剛度折減的等效慣性矩，用於計算服務載重下的撓度"
+      "key_formula": "ν = -ε_lateral / ε_axial；鋼材 ν ≈ 0.3",
+      "description": "軸向受力時橫向應變與軸向應變的負比值，反映材料橫向收縮/膨脹特性"
     },
     {
-      "concept_id": "CRACKING-MOMENT",
-      "concept_name": "開裂彎矩 Mcr",
-      "classification": "RC-U3-1",
+      "concept_id": "ELASTIC-MODULUS",
+      "concept_name": "彈性模數（楊氏模數）E",
+      "classification": "MM-U1-2",
       "related_concept_ids": [
-        "EFFECTIVE-MOMENT-OF-INERTIA"
+        "HOOKES-LAW",
+        "POISSON-RATIO"
       ],
-      "key_formula": "Mcr = fr·Ig/yt；fr = 2√f'c（kgf/cm²）",
-      "description": "混凝土拉力區開始開裂的彎矩值，低於此值可視為未開裂斷面"
+      "key_formula": "E = σ / ε；鋼材 E ≈ 200 GPa；鋁 E ≈ 70 GPa",
+      "description": "材料在彈性範圍內抵抗拉壓變形的能力，等於應力-應變曲線的初始斜率"
     },
     {
-      "concept_id": "PRESTRESS-LOSS",
-      "concept_name": "預力損失",
-      "classification": "RC-U4-3",
+      "concept_id": "GENERALIZED-HOOKES-LAW",
+      "concept_name": "廣義虎克定律（平面應力）",
+      "classification": "MM-U1-2",
       "related_concept_ids": [
-        "EFFECTIVE-PRESTRESS",
-        "CREEP-SHRINKAGE"
+        "HOOKES-LAW",
+        "POISSON-RATIO",
+        "PRINCIPAL-STRESS"
       ],
-      "key_formula": "總損失 = 彈性縮短 + 摩擦 + 錨定滑動 + 潛變 + 收縮 + 鬆弛",
-      "description": "預力混凝土中從初始預力到有效預力之間的損失，分立即損失與長期損失兩類"
+      "key_formula": "εₓ = (σₓ - νσᵧ)/E；εᵧ = (σᵧ - νσₓ)/E；γₓᵧ = τₓᵧ/G",
+      "description": "三維應力狀態下各方向應變與所有方向應力的關係，平面應力下退化為二維形式"
     },
     {
-      "concept_id": "EFFECTIVE-PRESTRESS",
-      "concept_name": "有效預力 Pe",
-      "classification": "RC-U4-1",
+      "concept_id": "PRINCIPAL-STRESS",
+      "concept_name": "主應力（Principal Stress）",
+      "classification": "MM-U1-3",
       "related_concept_ids": [
-        "PRESTRESS-LOSS"
+        "MOHRS-CIRCLE",
+        "MAX-SHEAR-STRESS"
       ],
-      "key_formula": "Pe = Pi × (1 - 損失率)；使用性驗算以 Pe 計算斷面應力",
-      "description": "扣除所有損失後的實際預力，是預力混凝土使用性驗算的關鍵參數"
+      "key_formula": "σ₁,₂ = (σₓ+σᵧ)/2 ± √[((σₓ-σᵧ)/2)² + τₓᵧ²]",
+      "description": "使截面上剪應力為零的特定斜截面上的正向應力，代表截面所受正向應力的最大值與最小值"
     },
     {
-      "concept_id": "STRONG-COLUMN-WEAK-BEAM",
-      "concept_name": "強柱弱梁",
-      "classification": "RC-U3-3",
+      "concept_id": "MOHRS-CIRCLE",
+      "concept_name": "莫爾圓（Mohr's Circle）",
+      "classification": "MM-U1-3",
       "related_concept_ids": [
-        "SPECIAL-MOMENT-FRAME-BEAM",
-        "SPECIAL-MOMENT-FRAME-COLUMN"
+        "PRINCIPAL-STRESS",
+        "MAX-SHEAR-STRESS"
       ],
-      "key_formula": "ΣMnc ≥ (6/5)·ΣMnb（節點處柱/梁彎矩強度比）",
-      "description": "耐震設計哲學：確保塑鉸發生在梁端而非柱端，防止層崩塌機構"
+      "key_formula": "圓心 C = (σₓ+σᵧ)/2；半徑 R = √[((σₓ-σᵧ)/2)² + τₓᵧ²]",
+      "description": "以圓圖形式表示平面應力狀態的應力轉換關係，直觀呈現主應力、最大剪應力及其方向"
     },
     {
-      "concept_id": "SHEAR-STRENGTH",
-      "concept_name": "RC 剪力強度 Vc + Vs",
-      "classification": "RC-U2-1",
+      "concept_id": "MAX-SHEAR-STRESS",
+      "concept_name": "最大剪應力",
+      "classification": "MM-U1-3",
       "related_concept_ids": [
-        "STIRRUP-DESIGN"
+        "PRINCIPAL-STRESS",
+        "MOHRS-CIRCLE"
       ],
-      "key_formula": "Vc = (1/6)√f'c·bw·d；Vs = Av·fyt·d/s；φVn = φ(Vc+Vs) ≥ Vu",
-      "description": "RC 梁剪力強度由混凝土貢獻 Vc 與箍筋貢獻 Vs 組成，是剪力設計的核心公式"
+      "key_formula": "τ_max = R = (σ₁-σ₂)/2；發生在與主應力面成 45° 的截面上",
+      "description": "在所有方向截面中，剪應力達到最大值的面上的剪應力，等於 Mohr's circle 的半徑"
     },
     {
-      "concept_id": "TORSION-DESIGN",
-      "concept_name": "RC 扭力強度設計（空間桁架類比）",
-      "classification": "RC-U2-2",
+      "concept_id": "AXIAL-STRESS",
+      "concept_name": "軸向應力",
+      "classification": "MM-U2-1",
       "related_concept_ids": [
-        "SHEAR-STRENGTH"
+        "HOOKES-LAW",
+        "AXIAL-DEFORMATION"
       ],
-      "key_formula": "At/s = Tu/(2φAo·fyt)；Al = (At/s)·poh·cot²θ",
-      "description": "以空間桁架模型（塑性理念）設計扭力箍筋與縱向鋼筋，Ao ≈ 0.85Aoh"
+      "key_formula": "σ = P / A（均勻截面，軸力 P 均勻分布）",
+      "description": "軸力桿件截面上均勻分布的正向應力，等於軸力除以截面積"
     },
     {
-      "concept_id": "PUNCHING-SHEAR",
-      "concept_name": "衝剪（雙向剪力）",
-      "classification": "RC-U3-2",
+      "concept_id": "AXIAL-DEFORMATION",
+      "concept_name": "軸向變形",
+      "classification": "MM-U3-1",
       "related_concept_ids": [
-        "SHEAR-STRENGTH"
+        "AXIAL-STRESS",
+        "HOOKES-LAW",
+        "THERMAL-STRESS"
       ],
-      "key_formula": "φVc = min(φ·(1/6)(1+2/βc)√f'c·bo·d, φ·(1/3)√f'c·bo·d)",
-      "description": "板柱接合處的雙向剪力破壞，臨界截面位於柱面外 d/2 處，是樓版設計的控制項目"
+      "key_formula": "δ = PL / (AE)（均勻截面）；δ = ∫₀ᴸ P(x)/(A(x)E) dx（變截面）",
+      "description": "軸力桿件在軸向力作用下的伸長或縮短量，與軸力、長度成正比，與 AE 成反比"
     },
     {
-      "concept_id": "SEISMIC-DESIGN",
-      "concept_name": "耐震設計（能力設計法）",
-      "classification": "RC-U3-3",
+      "concept_id": "THERMAL-STRESS",
+      "concept_name": "熱應力",
+      "classification": "MM-U3-1",
       "related_concept_ids": [
-        "STRONG-COLUMN-WEAK-BEAM",
-        "SPECIAL-MOMENT-FRAME-BEAM",
-        "SPECIAL-MOMENT-FRAME-COLUMN"
+        "AXIAL-DEFORMATION",
+        "STATICALLY-INDETERMINATE-BAR"
       ],
-      "key_formula": "Ve = (Mpr,l + Mpr,r)/ln ± wu·ln/2；Mpr 以 1.25fy 計算",
-      "description": "以可能彎矩強度 Mpr 計算梁/柱的設計剪力，確保剪力破壞不先於彎曲破壞（能力設計原則）"
+      "key_formula": "δ_T = αΔTL（熱變形）；不靜定桿件：δ_mechanical + δ_T = 指定值",
+      "description": "溫度變化使桿件產生自由熱變形，當受拘束時產生的附加應力，需通過相容方程式求解"
     },
     {
-      "concept_id": "DEVELOPMENT-LENGTH",
-      "concept_name": "鋼筋錨定長度 ld",
-      "classification": "RC-U2-3",
-      "related_concept_ids": [],
-      "key_formula": "ld = (fy·ψt·ψe·ψs)/(1.1·λ·√f'c·(cb+Ktr)/db)·db",
-      "description": "確保鋼筋充分錨定於混凝土中，在達到降伏強度前不發生拔出破壞"
+      "concept_id": "STATICALLY-INDETERMINATE-BAR",
+      "concept_name": "不靜定軸力桿件",
+      "classification": "MM-U3-1",
+      "related_concept_ids": [
+        "AXIAL-DEFORMATION",
+        "THERMAL-STRESS"
+      ],
+      "key_formula": "靜力方程 + 相容性方程（δ_total = 指定值）→ 聯立求解",
+      "description": "支承反力數超過靜力平衡方程數的桿件，需額外建立變形相容條件才能求解"
     },
     {
-      "concept_id": "DEFLECTION-CONTROL",
-      "concept_name": "撓度控制（容許撓度）",
-      "classification": "RC-U3-1",
+      "concept_id": "FLEXURAL-STRESS",
+      "concept_name": "彎曲正向應力",
+      "classification": "MM-U2-2",
       "related_concept_ids": [
-        "EFFECTIVE-MOMENT-OF-INERTIA",
-        "LONG-TERM-DEFLECTION"
+        "MOMENT-OF-INERTIA",
+        "SHEAR-FORMULA",
+        "NEUTRAL-AXIS"
       ],
-      "key_formula": "δ_allow = L/360（活載重）或 L/480（長期+活載重，有脆性非結構物）",
-      "description": "ACI 318 規定的撓度上限，以避免對非結構構件（隔間牆、玻璃）造成損壞"
+      "key_formula": "σ = M·y / I（y = 距中性軸距離）；σ_max = M·c / I（c = 距最外緣）",
+      "description": "梁在彎矩作用下截面上線性分布的正向應力，中性軸處為零，最外緣最大"
     },
     {
-      "concept_id": "CRACK-WIDTH",
-      "concept_name": "裂縫寬度控制",
-      "classification": "RC-U3-1",
+      "concept_id": "NEUTRAL-AXIS",
+      "concept_name": "中性軸",
+      "classification": "MM-U2-2",
       "related_concept_ids": [
-        "EFFECTIVE-MOMENT-OF-INERTIA"
+        "FLEXURAL-STRESS",
+        "CENTROID-CALCULATION"
       ],
-      "key_formula": "s ≤ min(380(280/fs) - 2.5cc, 300(280/fs))；fs ≈ (2/3)fy",
-      "description": "ACI 318 以主筋最大間距 s 間接控制裂縫寬度，避免過寬裂縫影響耐久性"
+      "key_formula": "中性軸通過截面形心（均質梁）；σ = 0 的軸線",
+      "description": "梁截面上彎曲正向應力為零的軸，對均質梁與等效轉換截面，中性軸通過形心"
     },
     {
-      "concept_id": "STIRRUP-DESIGN",
-      "concept_name": "箍筋設計（剪力筋）",
-      "classification": "RC-U2-1",
+      "concept_id": "SHEAR-FORMULA",
+      "concept_name": "梁剪應力公式（Jourawski 公式）",
+      "classification": "MM-U2-2",
       "related_concept_ids": [
-        "SHEAR-STRENGTH"
+        "FLEXURAL-STRESS",
+        "FIRST-MOMENT-Q"
       ],
-      "key_formula": "s = Av·fyt·d/Vs；smax = min(d/2, 600mm)（Vs ≤ (1/3)√f'c·bw·d 時）",
-      "description": "RC 梁剪力筋配置設計，包含需要量、最大間距限制與最小配筋量，確保 Vu ≤ φ(Vc+Vs)"
+      "key_formula": "τ = VQ / (Ib)；Q = ∫y dA（截面一部分對中性軸的面積一次矩）",
+      "description": "梁剪力在截面上的分布公式，最大剪應力通常在形心軸處（b 最小且 Q 最大處）"
     },
     {
-      "concept_id": "DUCTILE-FAILURE",
-      "concept_name": "延性破壞（拉力控制破壞）",
-      "classification": "RC-U1-1",
+      "concept_id": "FIRST-MOMENT-Q",
+      "concept_name": "面積一次矩 Q",
+      "classification": "MM-U2-2",
       "related_concept_ids": [
-        "BALANCED-REINFORCEMENT-RATIO",
-        "WHITNEY-STRESS-BLOCK"
+        "SHEAR-FORMULA"
       ],
-      "key_formula": "延性條件：εt ≥ 0.004（ACI 318-02+）；舊版：ρ ≤ 0.75ρb",
-      "description": "拉力鋼筋先達降伏應變，混凝土壓碎前鋼筋已有足夠變形的破壞模式，是 RC 設計的基本要求"
+      "key_formula": "Q = ∫y dA（截面剪力面以外面積對中性軸的一次矩）",
+      "description": "計算梁剪應力的關鍵幾何量，Q 在中性軸處最大（矩形截面），在最外緣處為零"
     },
     {
-      "concept_id": "LONG-COLUMN-MOMENT-MAGNIFIER",
-      "concept_name": "長柱彎矩放大法（δns）",
-      "classification": "RC-U1-3",
+      "concept_id": "TORSIONAL-SHEAR-STRESS",
+      "concept_name": "扭轉剪應力",
+      "classification": "MM-U2-3",
       "related_concept_ids": [
-        "PM-INTERACTION-DIAGRAM"
+        "POLAR-MOMENT-OF-INERTIA",
+        "TORSIONAL-ANGLE"
       ],
-      "key_formula": "δns = Cm / (1 - Pu/(0.75Pc)) ≥ 1.0；Pc = π²EI/(klu)²",
-      "description": "無側移構架中細長柱因二次效應（P-Δ）需放大設計彎矩，Cm 為等效均勻彎矩修正係數"
+      "key_formula": "τ = T·r / J（r = 距圓心距離）；τ_max = T·c / J（c = 半徑）",
+      "description": "圓截面桿件在扭矩作用下的剪應力，沿半徑線性分布，最大值在最外緣"
     },
     {
-      "concept_id": "LONG-TERM-DEFLECTION",
-      "concept_name": "長期撓度（潛變收縮修正）",
-      "classification": "RC-U3-1",
+      "concept_id": "TORSIONAL-ANGLE",
+      "concept_name": "扭轉角",
+      "classification": "MM-U3-3",
       "related_concept_ids": [
-        "EFFECTIVE-MOMENT-OF-INERTIA",
-        "CREEP-SHRINKAGE"
+        "TORSIONAL-SHEAR-STRESS",
+        "POLAR-MOMENT-OF-INERTIA"
       ],
-      "key_formula": "δlong = λΔ · δi(sustained)；λΔ = ξ/(1+50ρ')；ξ(5年) = 2.0",
-      "description": "持續載重下因潛變與收縮引起的長期撓度增量，以即時撓度乘長期修正係數 λΔ 估算"
+      "key_formula": "φ = TL / (GJ)（均勻截面）；φ = ∫T dx / (GJ)（變截面或變扭矩）",
+      "description": "扭矩作用下截面的相對轉動角度，與扭矩和長度成正比，與 GJ（扭轉剛度）成反比"
     },
     {
-      "concept_id": "CREEP-SHRINKAGE",
-      "concept_name": "潛變與收縮",
-      "classification": "RC-U3-1",
+      "concept_id": "BEAM-DEFLECTION",
+      "concept_name": "梁撓度",
+      "classification": "MM-U3-2",
       "related_concept_ids": [
-        "PRESTRESS-LOSS",
-        "LONG-TERM-DEFLECTION"
+        "MOMENT-OF-INERTIA",
+        "ELASTIC-MODULUS",
+        "DEFLECTION-INTEGRATION"
       ],
-      "key_formula": "潛變：εcr = Cc·εi；收縮：εsh（終極值約 300–800×10⁻⁶）",
-      "description": "混凝土時間相依變形：潛變為持續載重下應變持續增長，收縮為水分蒸發引起的體積縮小，均影響長期撓度與預力損失"
+      "key_formula": "EI·v'' = M(x)；或用疊加法：δ = PL³/(3EI)（懸臂）；5wL⁴/(384EI)（簡支均布）",
+      "description": "梁在載重作用下的垂直變位，由曲率-彎矩關係積分或查表疊加求得，受 EI（彎曲剛度）控制"
     },
     {
-      "concept_id": "SPECIAL-MOMENT-FRAME-BEAM",
-      "concept_name": "特殊矩形框架梁（耐震梁）",
-      "classification": "RC-U3-3",
+      "concept_id": "DEFLECTION-INTEGRATION",
+      "concept_name": "撓度積分法（雙積分法）",
+      "classification": "MM-U3-2",
       "related_concept_ids": [
-        "SEISMIC-DESIGN",
-        "STRONG-COLUMN-WEAK-BEAM"
+        "BEAM-DEFLECTION"
       ],
-      "key_formula": "Ve = (Mpr,l + Mpr,r)/ln ± wu·ln/2；Mpr 以 1.25fy 計算；Vc=0（Nu<0.05Agf'c）",
-      "description": "耐震特殊矩形框架梁的設計要求：可能彎矩強度 Mpr 控制設計剪力、密箍區配置（ln/4）、Vc=0 條件"
+      "key_formula": "EI·v'' = M(x) → 積分 → EI·v' + C₁ → 積分 → EI·v + C₁x + C₂；由邊界條件求 C₁, C₂",
+      "description": "由彎矩方程積分兩次得斜率和撓度，需用邊界條件（如固定端 v=v'=0，簡支端 v=0）確定積分常數"
     },
     {
-      "concept_id": "SPECIAL-MOMENT-FRAME-COLUMN",
-      "concept_name": "特殊矩形框架柱（耐震柱）",
-      "classification": "RC-U3-3",
+      "concept_id": "EULER-BUCKLING",
+      "concept_name": "Euler 挫屈臨界載重",
+      "classification": "MM-U3-4",
       "related_concept_ids": [
-        "SEISMIC-DESIGN",
-        "STRONG-COLUMN-WEAK-BEAM"
+        "SLENDERNESS-RATIO",
+        "EFFECTIVE-LENGTH"
       ],
-      "key_formula": "Ash ≥ max(0.3·s·hc·f'c/fyt·(Ag/Ach-1), 0.09·s·hc·f'c/fyt)；lo ≥ max(h, ln/6, 45cm)",
-      "description": "耐震特殊矩形框架柱的設計要求：圍束箍筋 Ash 計算確保混凝土圍束、密箍區長度 lo、強柱弱梁驗核"
+      "key_formula": "Pₑ = π²EI / (KL)²；σₑ = π²E / (KL/r)²（KL/r = 細長比）",
+      "description": "柱件在軸壓下發生側向失穩的臨界壓力，由端部條件（有效長度係數 K）和截面特性（EI）決定"
+    },
+    {
+      "concept_id": "EFFECTIVE-LENGTH",
+      "concept_name": "有效長度係數 K",
+      "classification": "MM-U3-4",
+      "related_concept_ids": [
+        "EULER-BUCKLING"
+      ],
+      "key_formula": "兩端鉸支 K=1.0；兩端固定 K=0.5；一端固定一端鉸支 K=0.7；一端固定一端自由 K=2.0",
+      "description": "反映柱端部拘束條件對挫屈臨界載重影響的係數，K 越小代表拘束越強、臨界載重越大"
+    },
+    {
+      "concept_id": "SLENDERNESS-RATIO",
+      "concept_name": "細長比",
+      "classification": "MM-U3-4",
+      "related_concept_ids": [
+        "EULER-BUCKLING",
+        "EFFECTIVE-LENGTH"
+      ],
+      "key_formula": "λ = KL / r（r = √(I/A) = 迴轉半徑）",
+      "description": "描述柱件幾何細長程度的無因次比值，細長比越大越容易挫屈，臨界應力越低"
+    },
+    {
+      "concept_id": "PLASTIC-MOMENT",
+      "concept_name": "塑性矩 Mp",
+      "classification": "MM-U4-1",
+      "related_concept_ids": [
+        "PLASTIC-HINGE",
+        "SHAPE-FACTOR"
+      ],
+      "key_formula": "Mp = σᵧ · Z（Z = 塑性斷面模數）；矩形：Z = bh²/4；圓形：Z ≈ d³/6",
+      "description": "截面完全塑化（全截面達降伏應力）時所承受的最大彎矩，超過此值截面形成塑性鉸"
+    },
+    {
+      "concept_id": "PLASTIC-HINGE",
+      "concept_name": "塑性鉸",
+      "classification": "MM-U4-1",
+      "related_concept_ids": [
+        "PLASTIC-MOMENT",
+        "ULTIMATE-LOAD"
+      ],
+      "key_formula": "塑性鉸處彎矩 = Mp（維持常數）；結構形成破壞機構 = 靜定 + 足夠塑性鉸數",
+      "description": "截面達塑性矩 Mp 後產生的理想鉸接，可自由轉動但維持 Mp 不變，是塑性分析的核心概念"
+    },
+    {
+      "concept_id": "SHAPE-FACTOR",
+      "concept_name": "形狀因子（Shape Factor）",
+      "classification": "MM-U4-1",
+      "related_concept_ids": [
+        "PLASTIC-MOMENT"
+      ],
+      "key_formula": "f = Mp / My = Z / S（S = 彈性斷面模數 = I/c）；矩形 f = 1.5；圓形 f ≈ 1.7",
+      "description": "塑性矩與彈性彎矩極限的比值，反映截面充分利用材料強度的程度，越大表示塑性儲備越多"
+    },
+    {
+      "concept_id": "ULTIMATE-LOAD",
+      "concept_name": "極限載重（Ultimate Load）",
+      "classification": "MM-U4-1",
+      "related_concept_ids": [
+        "PLASTIC-HINGE",
+        "PLASTIC-MOMENT"
+      ],
+      "key_formula": "由虛功原理：P_u · δ = ΣMp · θ_i（對所有塑性鉸）",
+      "description": "結構形成破壞機構（足夠塑性鉸數使結構不穩定）時的載重，用虛功法計算"
+    },
+    {
+      "concept_id": "RESIDUAL-STRESS",
+      "concept_name": "殘留應力",
+      "classification": "MM-U4-2",
+      "related_concept_ids": [
+        "PLASTIC-MOMENT",
+        "HOOKES-LAW"
+      ],
+      "key_formula": "σ_residual = σ_loaded - σ_springback；σ_springback = M_unload · y / I（彈性回彈）",
+      "description": "載重超過降伏範圍後完全卸載，由於塑性應變不可逆，截面中剩餘的自平衡應力分布"
+    },
+    {
+      "concept_id": "THIN-WALL-SHEAR-FLOW",
+      "concept_name": "薄壁截面剪力流",
+      "classification": "MM-U2-3",
+      "related_concept_ids": [
+        "TORSIONAL-SHEAR-STRESS",
+        "POLAR-MOMENT-OF-INERTIA"
+      ],
+      "key_formula": "q = T / (2Aₘ)（Aₘ = 中線包圍面積）；τ = q / t（t = 壁厚）",
+      "description": "薄壁封閉截面在扭矩作用下，沿截面中線均勻分布的剪力流，用於計算開口或封閉薄壁截面的扭轉剪應力"
     }
   ]
 }

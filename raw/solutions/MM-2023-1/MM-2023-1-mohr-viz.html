@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>MM-2023-1 莫爾圓 — b 點應力狀態</title>
+<style>
+body{font-family:"Segoe UI",Arial,sans-serif;background:#f8f9fa;margin:0;padding:10px;display:flex;flex-direction:column;align-items:center;}
+h3{margin:6px 0 2px;font-size:15px;color:#1a237e;}
+p.sub{margin:0 0 8px;font-size:12px;color:#555;}
+canvas{background:#fff;border:1px solid #ccc;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,.12);}
+.info{display:flex;gap:16px;margin-top:8px;flex-wrap:wrap;justify-content:center;}
+.card{background:#fff;border:1px solid #ccc;border-radius:6px;padding:8px 14px;font-size:13px;min-width:120px;text-align:center;}
+.card .label{color:#777;font-size:11px;}
+.card .val{font-weight:700;font-size:16px;color:#1a237e;}
+.card.red .val{color:#c62828;}
+.card.green .val{color:#2e7d32;}
+</style>
+</head>
+<body>
+<h3>MM-2023-1 — b 點（y=75 cm）莫爾圓</h3>
+<p class="sub">平面應變；$\sigma_x=2.5$ MPa，$\sigma_y=0$，$|\tau_{xy}|=0.75$ MPa</p>
+<canvas id="cv" width="580" height="420"></canvas>
+<div class="info">
+  <div class="card"><div class="label">σ₁（拉）</div><div class="val">+2.71 MPa</div></div>
+  <div class="card red"><div class="label">σ₂（壓）</div><div class="val">−0.21 MPa</div></div>
+  <div class="card"><div class="label">σz（面外）</div><div class="val">+0.50 MPa</div></div>
+  <div class="card green"><div class="label">τ_max（絕對）</div><div class="val">1.46 MPa</div></div>
+</div>
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const W=580,H=420;
+
+// Problem values
+const sx=2.5, sy=0, txy=0.75;
+const C=(sx+sy)/2;          // 1.25
+const R=Math.sqrt(((sx-sy)/2)**2+txy**2); // sqrt(2.125)=1.458
+const s1=C+R, s2=C-R;       // 2.708, -0.208
+const sz=0.2*(sx+sy);       // 0.5
+
+// Canvas mapping: origin at (ox,oy), scale px/MPa
+const ox=230, oy=220, scale=70; // px per MPa
+
+function mpaToPx(v){return ox+v*scale;}
+function toPy(t){return oy-t*scale;}
+
+// axes
+function drawAxes(){
+  ctx.strokeStyle='#aaa'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(30,oy); ctx.lineTo(W-20,oy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox,30); ctx.lineTo(ox,H-30); ctx.stroke();
+  // arrowheads
+  ctx.fillStyle='#aaa';
+  ctx.beginPath(); ctx.moveTo(W-20,oy); ctx.lineTo(W-30,oy-4); ctx.lineTo(W-30,oy+4); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(ox,30); ctx.lineTo(ox-4,40); ctx.lineTo(ox+4,40); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#555'; ctx.font='13px serif';
+  ctx.fillText('σ (MPa)',W-20,oy-10);
+  ctx.fillText('τ (MPa)',ox+6,38);
+  // zero label
+  ctx.fillStyle='#777'; ctx.font='11px sans-serif';
+  ctx.fillText('0',ox+3,oy+13);
+  // grid ticks
+  for(let v=-2;v<=4;v+=0.5){
+    const x=mpaToPx(v);
+    ctx.strokeStyle='#e0e0e0'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(x,35); ctx.lineTo(x,H-35); ctx.stroke();
+    if(v===Math.round(v)){
+      ctx.strokeStyle='#bbb';
+      ctx.beginPath(); ctx.moveTo(x,oy-4); ctx.lineTo(x,oy+4); ctx.stroke();
+      ctx.fillStyle='#888'; ctx.font='10px sans-serif'; ctx.textAlign='center';
+      ctx.fillText(v.toFixed(1),x,oy+16);
+    }
+  }
+  for(let t=-2;t<=2;t+=0.5){
+    const y=toPy(t);
+    ctx.strokeStyle='#e0e0e0'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(35,y); ctx.lineTo(W-30,y); ctx.stroke();
+    if(t!==0 && t===Math.round(t*2)/2){
+      ctx.strokeStyle='#bbb';
+      ctx.beginPath(); ctx.moveTo(ox-4,y); ctx.lineTo(ox+4,y); ctx.stroke();
+      ctx.fillStyle='#888'; ctx.font='10px sans-serif'; ctx.textAlign='right';
+      ctx.fillText(t.toFixed(1),ox-7,y+4);
+    }
+  }
+  ctx.textAlign='left';
+}
+
+// Mohr circle
+function drawCircle(){
+  ctx.strokeStyle='#1565c0'; ctx.lineWidth=2.5;
+  ctx.beginPath();
+  ctx.arc(mpaToPx(C), toPy(0), R*scale, 0, 2*Math.PI);
+  ctx.stroke();
+}
+
+// Points A (σx, -τxy) and B (σy, +τxy) [convention: A on right]
+function drawPoints(){
+  // Point A: (sx, txy) — represents x-face: σ=σx, τ=+txy (downward shear → positive τ in Mohr convention)
+  const ax=mpaToPx(sx), ay=toPy(txy);
+  ctx.fillStyle='#c62828'; ctx.strokeStyle='#fff'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(ax,ay,6,0,2*Math.PI); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#c62828'; ctx.font='bold 12px sans-serif';
+  ctx.fillText('A (σx, τxy)',ax+8,ay-4);
+
+  // Point B: (sy, -txy)
+  const bx=mpaToPx(sy), by=toPy(-txy);
+  ctx.fillStyle='#1b5e20'; ctx.beginPath(); ctx.arc(bx,by,6,0,2*Math.PI); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#1b5e20'; ctx.font='bold 12px sans-serif';
+  ctx.fillText('B (σy, −τxy)',bx+8,by+14);
+
+  // center
+  ctx.fillStyle='#1565c0';
+  ctx.beginPath(); ctx.arc(mpaToPx(C),toPy(0),4,0,2*Math.PI); ctx.fill();
+  ctx.font='11px sans-serif'; ctx.fillStyle='#1565c0';
+  ctx.fillText('C=1.25',mpaToPx(C)+5,toPy(0)-6);
+
+  // diameter line
+  ctx.strokeStyle='#90caf9'; ctx.lineWidth=1; ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawPrincipalPoints(){
+  // σ1
+  ctx.fillStyle='#4a148c';
+  ctx.beginPath(); ctx.arc(mpaToPx(s1),toPy(0),7,0,2*Math.PI); ctx.fill();
+  ctx.font='bold 12px sans-serif'; ctx.fillStyle='#4a148c';
+  ctx.fillText('σ₁='+s1.toFixed(2),mpaToPx(s1)+9,toPy(0)+4);
+  // σ2
+  ctx.beginPath(); ctx.arc(mpaToPx(s2),toPy(0),7,0,2*Math.PI); ctx.fill();
+  ctx.fillText('σ₂='+s2.toFixed(2),mpaToPx(s2)-72,toPy(0)+4);
+  // τmax (top of circle)
+  ctx.fillStyle='#e65100';
+  ctx.beginPath(); ctx.arc(mpaToPx(C),toPy(R),7,0,2*Math.PI); ctx.fill();
+  ctx.font='bold 11px sans-serif'; ctx.fillStyle='#e65100';
+  ctx.fillText('τmax='+R.toFixed(3),mpaToPx(C)+9,toPy(R)-4);
+  // radius annotation
+  ctx.strokeStyle='#e65100'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(mpaToPx(C),toPy(0)); ctx.lineTo(mpaToPx(C),toPy(R)); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#e65100'; ctx.font='11px sans-serif';
+  ctx.fillText('R='+R.toFixed(3),mpaToPx(C)+5,toPy(R/2));
+  // σz marker on axis
+  ctx.fillStyle='#388e3c';
+  ctx.beginPath(); ctx.arc(mpaToPx(sz),toPy(0),5,0,2*Math.PI); ctx.fill();
+  ctx.font='11px sans-serif'; ctx.fillStyle='#388e3c';
+  ctx.fillText('σz=0.50',mpaToPx(sz)-2,toPy(0)+20);
+}
+
+function drawLegend(){
+  ctx.font='11px sans-serif'; ctx.fillStyle='#555';
+  ctx.fillText('σx=2.5 MPa, σy=0, |τxy|=0.75 MPa, ν=0.2',30,H-12);
+  ctx.fillText('σz=ν(σx+σy)=0.50 MPa（面外，平面應變）',30,H-26);
+}
+
+drawAxes();
+drawCircle();
+drawPoints();
+drawPrincipalPoints();
+drawLegend();
+</script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>MM-2025-4 鉸接組合梁 SFD / BMD</title>
+<style>
+  body{font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif;background:#fafafa;margin:0;padding:10px;width:580px}
+  h3{margin:4px 0 8px;font-size:1rem}
+  .panel{background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px;margin-bottom:8px}
+  canvas{display:block;background:#fff}
+  .note{font-size:.75rem;color:#666;margin-top:4px}
+</style>
+</head>
+<body>
+<h3>MM-2025-4　鉸接組合梁：結構圖・剪力圖・彎矩圖</h3>
+<div class="panel">
+  <canvas id="cv" width="560" height="540"></canvas>
+  <div class="note">
+    M = 2×10⁷ N·mm（逆時針）施於 x=1800。鉸 g₁(x=800)、g₂(x=2800) 處彎矩恆為零；
+    全梁剪力定值 +10 kN；彎矩於力偶處跳躍 −2×10⁷。最大 |M| = 1×10⁷ N·mm。
+    變位答案：δ = 0.0076 mm（↑）、θ = 5.49×10⁻⁵ rad（逆時針）@ x=1800。
+  </div>
+</div>
+<script>
+(function(){
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const Ltot=3800, ml=55, mr=20, W=560;
+const sx=x=>ml+(W-ml-mr)*x/Ltot;
+const g1=800,xc=1800,g2=2800;
+function hatchWall(x,y0,y1,dir){
+  ctx.strokeStyle='#475569';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(x,y0);ctx.lineTo(x,y1);ctx.stroke();
+  ctx.lineWidth=1;
+  for(let y=y0;y<y1;y+=8){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-8*dir,y+8);ctx.stroke();}
+}
+// ===== 結構圖 =====
+const yb=70;
+ctx.font='11px sans-serif';
+ctx.fillStyle='#1f2937';ctx.fillText('結構圖',8,18);
+hatchWall(sx(0),yb-30,yb+30,1);hatchWall(sx(Ltot),yb-30,yb+30,-1);
+ctx.strokeStyle='#1f2937';ctx.lineWidth=3;
+ctx.beginPath();ctx.moveTo(sx(0),yb);ctx.lineTo(sx(Ltot),yb);ctx.stroke();
+// 鉸
+[g1,g2].forEach(g=>{ctx.fillStyle='#fff';ctx.strokeStyle='#dc2626';ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(sx(g),yb,5,0,7);ctx.fill();ctx.stroke();});
+ctx.fillStyle='#dc2626';
+ctx.fillText('g₁ (鉸)',sx(g1)-18,yb+22);ctx.fillText('g₂ (鉸)',sx(g2)-18,yb+22);
+// 力偶
+ctx.strokeStyle='#7c3aed';ctx.lineWidth=2;
+ctx.beginPath();ctx.arc(sx(xc),yb,14,0.5,5.0);ctx.stroke();
+// 箭頭（逆時針）
+ctx.fillStyle='#7c3aed';
+ctx.beginPath();ctx.moveTo(sx(xc)+14*Math.cos(0.5),yb+14*Math.sin(0.5));
+ctx.lineTo(sx(xc)+14*Math.cos(0.5)+8,yb+14*Math.sin(0.5)+2);
+ctx.lineTo(sx(xc)+14*Math.cos(0.5)+2,yb+14*Math.sin(0.5)-8);ctx.closePath();ctx.fill();
+ctx.fillText('M = 2×10⁷ N·mm ↶',sx(xc)-50,yb-22);
+ctx.fillStyle='#334155';
+ctx.fillText('L₁=800',sx(400)-20,yb+38);ctx.fillText('L꜀=2000',sx(1800)-22,yb+38);ctx.fillText('L₂=1000',sx(3300)-22,yb+38);
+// ===== SFD =====
+const y0s=200, sscale=0.000045*120/10; // 10kN -> 54px
+ctx.fillStyle='#1f2937';ctx.fillText('剪力圖 SFD（kN）',8,150);
+ctx.strokeStyle='#94a3b8';ctx.lineWidth=1;
+ctx.beginPath();ctx.moveTo(sx(0),y0s);ctx.lineTo(sx(Ltot),y0s);ctx.stroke();
+const vh=44;
+ctx.fillStyle='rgba(37,99,235,.18)';ctx.fillRect(sx(0),y0s-vh,sx(Ltot)-sx(0),vh);
+ctx.strokeStyle='#2563eb';ctx.lineWidth=2;
+ctx.strokeRect(sx(0),y0s-vh,sx(Ltot)-sx(0),vh);
+ctx.fillStyle='#2563eb';ctx.fillText('V = +10 kN（全梁定值，鉸與力偶皆不影響剪力）',sx(900),y0s-vh-6);
+// ===== BMD =====
+const y0m=400, mscale=44/1e7; // 1e7 -> 44px（sagging 正畫下方？工程慣例：正畫上）
+ctx.fillStyle='#1f2937';ctx.fillText('彎矩圖 BMD（N·mm，sagging 正繪於軸上方）',8,300);
+ctx.strokeStyle='#94a3b8';ctx.beginPath();ctx.moveTo(sx(0),y0m);ctx.lineTo(sx(Ltot),y0m);ctx.stroke();
+const pts=[[0,-8e6],[g1,0],[xc,1e7],[xc,-1e7],[g2,0],[Ltot,1e7]];
+const Y=m=>y0m-m*mscale;
+ctx.fillStyle='rgba(5,150,105,.15)';
+ctx.beginPath();ctx.moveTo(sx(0),y0m);
+pts.forEach(p=>ctx.lineTo(sx(p[0]),Y(p[1])));
+ctx.lineTo(sx(Ltot),y0m);ctx.closePath();ctx.fill();
+ctx.strokeStyle='#059669';ctx.lineWidth=2.2;
+ctx.beginPath();ctx.moveTo(sx(pts[0][0]),Y(pts[0][1]));
+pts.forEach(p=>ctx.lineTo(sx(p[0]),Y(p[1])));ctx.stroke();
+// 控制點標註
+ctx.fillStyle='#059669';ctx.font='10px sans-serif';
+ctx.fillText('-8×10⁶',sx(0)+4,Y(-8e6)+12);
+ctx.fillText('0',sx(g1)-3,Y(0)-6);
+ctx.fillText('+1×10⁷',sx(xc)-52,Y(1e7)-5);
+ctx.fillText('-1×10⁷',sx(xc)+8,Y(-1e7)+12);
+ctx.fillText('0',sx(g2)-3,Y(0)-6);
+ctx.fillText('+1×10⁷',sx(Ltot)-44,Y(1e7)-5);
+ctx.fillStyle='#7c3aed';ctx.fillText('跳躍 -2×10⁷',sx(xc)+8,y0m-2);
+// 鉸位置虛線
+ctx.strokeStyle='#dc2626';ctx.setLineDash([3,3]);ctx.lineWidth=1;
+[g1,g2].forEach(g=>{ctx.beginPath();ctx.moveTo(sx(g),120);ctx.lineTo(sx(g),y0m+50);ctx.stroke();});
+ctx.setLineDash([]);
+// 變位標註
+ctx.fillStyle='#1f2937';ctx.font='11px sans-serif';
+ctx.fillText('力偶作用點變位：δ = 0.0076 mm（↑）｜θ = 5.49×10⁻⁵ rad（↶）',8,520);
+})();
+</script>
+</body>
+</html>

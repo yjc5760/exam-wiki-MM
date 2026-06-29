@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>MM-2024-3 剛性桿＋彈簧柱 挫屈互動圖</title>
+<style>
+  body{font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif;background:#fafafa;margin:0;padding:10px;width:580px}
+  h3{margin:4px 0 8px;font-size:1rem}
+  .panel{background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px;margin-bottom:8px}
+  canvas{display:block;background:#fff}
+  .row{display:flex;align-items:center;gap:8px;font-size:.85rem;margin:6px 0}
+  input[type=range]{flex:1}
+  .note{font-size:.75rem;color:#666;margin-top:4px}
+  .val{font-weight:700}
+</style>
+</head>
+<body>
+<h3>MM-2024-3　兩剛性桿＋中點彈簧：臨界載重 P꜀ᵣ = kL/2</h3>
+<div class="panel">
+  <canvas id="cv" width="560" height="360"></canvas>
+  <div class="row"><span>側移 δ/L：</span><input type="range" id="d" min="-30" max="30" value="12" step="1">
+    <span id="dv" style="width:70px">0.12</span></div>
+  <div class="row"><span>載重 P/(kL)：</span><input type="range" id="p" min="0" max="100" value="30" step="1">
+    <span id="pv" style="width:200px"></span></div>
+  <div class="note">
+    擾動平衡：上桿對 C 取矩 ⇒ <b>Pδ = Bₓ·L = (kδ/2)·L</b> ⇒ 非平凡解條件 <b>P꜀ᵣ = kL/2</b>。<br>
+    能量觀點：P 做功 Pδ²/L vs 彈簧儲能 ½kδ²。P &lt; kL/2 回正（穩定）、P &gt; kL/2 傾倒（不穩定）。
+  </div>
+</div>
+<script>
+(function(){
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const cx0=300, yA=320, Lpx=120;
+function draw(){
+  const dl=+document.getElementById('d').value/100;   // δ/L
+  const pr=+document.getElementById('p').value/100;   // P/(kL)
+  document.getElementById('dv').textContent=dl.toFixed(2);
+  const stable=pr<0.5;
+  document.getElementById('pv').innerHTML='P = '+pr.toFixed(2)+' kL → <span class="val" style="color:'+(pr===0.5?'#d97706':stable?'#059669':'#dc2626')+'">'+(pr===0.5?'臨界（中性平衡）':stable?'穩定（回正）':'不穩定（傾倒）')+'</span>';
+  ctx.clearRect(0,0,560,360);
+  const dx=dl*Lpx;
+  const A={x:cx0,y:yA}, C={x:cx0+dx,y:yA-Lpx}, B={x:cx0,y:yA-2*Lpx};
+  // 原位虛線
+  ctx.strokeStyle='#cbd5e1';ctx.setLineDash([4,4]);ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(cx0,yA);ctx.lineTo(cx0,yA-2*Lpx);ctx.stroke();ctx.setLineDash([]);
+  // 桿
+  ctx.strokeStyle='#2563eb';ctx.lineWidth=5;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(C.x,C.y);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(C.x,C.y);ctx.lineTo(B.x,B.y);ctx.stroke();
+  // 支承
+  ctx.fillStyle='#475569';ctx.font='12px sans-serif';
+  // A 鉸
+  ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(A.x-12,A.y+18);ctx.lineTo(A.x+12,A.y+18);ctx.closePath();
+  ctx.strokeStyle='#475569';ctx.lineWidth=2;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(A.x-18,A.y+18);ctx.lineTo(A.x+18,A.y+18);ctx.stroke();
+  ctx.fillText('A（鉸）',A.x+22,A.y+12);
+  // B 滾（側向拘束、軸向自由）
+  ctx.strokeStyle='#475569';
+  ctx.beginPath();ctx.moveTo(B.x-26,B.y-14);ctx.lineTo(B.x-26,B.y+14);ctx.stroke();
+  ctx.beginPath();ctx.arc(B.x-18,B.y,7,0,7);ctx.stroke();
+  ctx.fillText('B（滾支承：側向拘束）',B.x+14,B.y-2);
+  // 鉸 C
+  [A,C,B].forEach(pt=>{ctx.fillStyle='#fff';ctx.strokeStyle='#1f2937';ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(pt.x,pt.y,5,0,7);ctx.fill();ctx.stroke();});
+  ctx.fillStyle='#dc2626';ctx.fillText('C（鉸）',C.x+10,C.y+4);
+  // 彈簧
+  const sx0=cx0-150;
+  ctx.strokeStyle='#d97706';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(sx0,C.y);
+  const n=8,len=C.x-sx0;
+  for(let i=0;i<=n;i++){const x=sx0+len*i/n;const y=C.y+((i%2===1)?8:(i%2===0&&i!==0&&i!==n?-8:0));ctx.lineTo(x,i===0||i===n?C.y:y);}
+  ctx.stroke();
+  // 牆
+  ctx.strokeStyle='#475569';ctx.beginPath();ctx.moveTo(sx0,C.y-16);ctx.lineTo(sx0,C.y+16);ctx.stroke();
+  for(let y=C.y-16;y<C.y+16;y+=7){ctx.beginPath();ctx.moveTo(sx0,y);ctx.lineTo(sx0-7,y+7);ctx.stroke();}
+  ctx.fillStyle='#d97706';ctx.fillText('k（恢復力 kδ）',sx0+8,C.y-14);
+  // P 箭頭
+  ctx.strokeStyle='#dc2626';ctx.lineWidth=2.5;
+  ctx.beginPath();ctx.moveTo(B.x,B.y-46);ctx.lineTo(B.x,B.y-10);ctx.stroke();
+  ctx.fillStyle='#dc2626';
+  ctx.beginPath();ctx.moveTo(B.x,B.y-8);ctx.lineTo(B.x-6,B.y-18);ctx.lineTo(B.x+6,B.y-18);ctx.closePath();ctx.fill();
+  ctx.fillText('P',B.x+10,B.y-30);
+  // δ 標註
+  if(Math.abs(dx)>3){ctx.strokeStyle='#059669';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+    ctx.beginPath();ctx.moveTo(cx0,C.y);ctx.lineTo(C.x,C.y);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#059669';ctx.fillText('δ',(cx0+C.x)/2-4,C.y-6);}
+  // 能量比較條
+  const E_p=pr*dl*dl, E_s=0.5*dl*dl; // 除以 kL·L 之無因次能量
+  const bx=20,by=30,bw=160;
+  ctx.fillStyle='#1f2937';ctx.font='11px sans-serif';ctx.fillText('能量競爭（∝δ²）',bx,by-10);
+  ctx.fillStyle='#dc2626';ctx.fillRect(bx,by,Math.min(bw,E_p*4000),12);
+  ctx.fillStyle='#1f2937';ctx.fillText('P 做功 Pδ²/L',bx+Math.min(bw,E_p*4000)+6,by+10);
+  ctx.fillStyle='#d97706';ctx.fillRect(bx,by+20,Math.min(bw,E_s*4000),12);
+  ctx.fillStyle='#1f2937';ctx.fillText('彈簧儲能 ½kδ²',bx+Math.min(bw,E_s*4000)+6,by+30);
+}
+document.getElementById('d').addEventListener('input',draw);
+document.getElementById('p').addEventListener('input',draw);
+draw();
+})();
+</script>
+</body>
+</html>

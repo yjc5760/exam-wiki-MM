@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>MM-2004-3 撓度曲線比較（n=0.5 vs n=1）</title>
+<style>
+  body { font-family: "Helvetica Neue", Arial, sans-serif; margin: 0; padding: 12px; background: #fafafa; }
+  h2 { font-size: 14px; color: #333; margin: 0 0 6px; text-align: center; }
+  .subtitle { font-size: 11px; color: #666; text-align: center; margin-bottom: 10px; }
+  canvas { display: block; margin: 0 auto; border: 1px solid #ddd; background: #fff; border-radius: 4px; }
+  .legend { display: flex; justify-content: center; gap: 24px; margin: 8px 0; font-size: 11px; }
+  .leg-item { display: flex; align-items: center; gap: 6px; }
+  .leg-line { width: 28px; height: 3px; border-radius: 2px; }
+  .info { font-size: 11px; color: #555; text-align: center; margin-top: 8px; background: #f0f0f0; border-radius: 4px; padding: 6px 10px; max-width: 550px; margin-left: auto; margin-right: auto; }
+  .param-box { display: flex; justify-content: center; gap: 16px; margin: 8px auto; max-width: 550px; flex-wrap: wrap; font-size: 11px; }
+  .param { display: flex; align-items: center; gap: 4px; }
+  label { color: #444; }
+  input[type=range] { width: 80px; }
+  .val { color: #c0392b; font-weight: bold; min-width: 28px; display: inline-block; }
+</style>
+</head>
+<body>
+<h2>MM-2004-3 ─ 懸臂梁撓度曲線（非線性材料 σ = Bεⁿ）</h2>
+<div class="subtitle">均佈載重 q，矩形斷面 b×h，x 自自由端起算</div>
+
+<div class="param-box">
+  <div class="param">
+    <label>q =</label>
+    <input type="range" id="qSlider" min="1" max="5" step="0.5" value="2">
+    <span class="val" id="qVal">2</span>
+  </div>
+  <div class="param">
+    <label>b =</label>
+    <input type="range" id="bSlider" min="0.1" max="0.5" step="0.05" value="0.2">
+    <span class="val" id="bVal">0.2</span>
+  </div>
+  <div class="param">
+    <label>h =</label>
+    <input type="range" id="hSlider" min="0.2" max="0.8" step="0.05" value="0.4">
+    <span class="val" id="hVal">0.4</span>
+  </div>
+  <div class="param">
+    <label>B =</label>
+    <input type="range" id="BSlider" min="100" max="500" step="50" value="200">
+    <span class="val" id="BVal">200</span>
+  </div>
+  <div class="param">
+    <label>L =</label>
+    <input type="range" id="LSlider" min="1" max="5" step="0.5" value="3">
+    <span class="val" id="LVal">3</span>
+  </div>
+</div>
+
+<canvas id="cv" width="560" height="320"></canvas>
+
+<div class="legend">
+  <div class="leg-item"><div class="leg-line" style="background:#e74c3c;"></div><span>n = 0.5（本題，非線性）</span></div>
+  <div class="leg-item"><div class="leg-line" style="background:#2980b9; border-top: 2px dashed #2980b9; background:none; height:0;"></div><span>n = 1.0（線彈性，E = B）</span></div>
+  <div class="leg-item"><div class="leg-line" style="background:#27ae60;"></div><span>n = 0.3（強非線性）</span></div>
+</div>
+
+<div class="info" id="infoBox">
+  n=0.5 自由端最大撓度：<span id="vmax05" style="color:#c0392b;font-weight:bold;"></span> m　|
+  n=1.0：<span id="vmax10" style="color:#2980b9;font-weight:bold;"></span> m　|
+  n=0.3：<span id="vmax03" style="color:#27ae60;font-weight:bold;"></span> m
+</div>
+
+<div class="info" style="margin-top:6px; background:#fff8e1;">
+  <b>公式：</b>
+  n=0.5: v(x) = (25q²/2b²B²h⁵)·(x⁶/30 − L⁵x/5 + L⁶/6)
+  &nbsp;|&nbsp;
+  n=1: v(x) = (6q/Ebh³)·(x⁴/24 − L³x/6 + L⁴/8) &nbsp;[E=B]
+</div>
+
+<script>
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+function getParams() {
+  return {
+    q: parseFloat(document.getElementById('qSlider').value),
+    b: parseFloat(document.getElementById('bSlider').value),
+    h: parseFloat(document.getElementById('hSlider').value),
+    B: parseFloat(document.getElementById('BSlider').value),
+    L: parseFloat(document.getElementById('LSlider').value),
+  };
+}
+
+// Deflection for σ = Bε^n beam (general n)
+function vn(x, n, q, b, h, B, L) {
+  // M-κ: M = C·κ^n, C = bBh^(n+2)/(2^(n+1)*(n+2))
+  // κ = (M/C)^(1/n)
+  // M(x) = qx²/2
+  // κ(x) = [(qx²/2)/C]^(1/n)
+  // Integrate twice with BC at x=L: v=0, v'=0
+
+  const C = (b * B * Math.pow(h, n + 2)) / (Math.pow(2, n + 1) * (n + 2));
+  const Mfn = xx => q * xx * xx / 2;
+
+  // κ(x) = (M(x)/C)^(1/n) = (q*x²/(2C))^(1/n)
+  // Let A = (q/(2C))^(1/n)
+  // κ(x) = A * x^(2/n)
+  const invn = 1 / n;
+  const A = Math.pow(q / (2 * C), invn);
+  const exp = 2 * invn;           // exponent of x in κ
+
+  // ∫ κ dx = A * x^(exp+1)/(exp+1)
+  // ∫∫ κ dx dx = A * x^(exp+2)/((exp+1)(exp+2))
+
+  const e1 = exp + 1;
+  const e2 = exp + 2;
+
+  // dv/dx = A * x^(e1)/e1 + C1
+  // v(L) = A*L^(e2)/(e1*e2) + C1*L + C2 = 0
+  // v'(L) = A*L^(e1)/e1 + C1 = 0 → C1 = -A*L^e1/e1
+  const C1 = -A * Math.pow(L, e1) / e1;
+  // C2 = -A*L^(e2)/(e1*e2) - C1*L = -A*L^(e2)/(e1*e2) + A*L^(e2)/e1
+  //      = A*L^(e2) * (1/e1 - 1/(e1*e2)) = A*L^(e2) * (e2 - 1)/(e1*e2)
+  //      = A*L^(e2) * (exp+1)/(e1*e2) = A*L^(e2)/e2
+  const C2 = A * Math.pow(L, e2) / e2;
+
+  return A * Math.pow(x, e2) / (e1 * e2) + C1 * x + C2;
+}
+
+// Special case n=1 (linear elastic, B = E)
+function v1(x, q, b, h, E, L) {
+  const I = b * Math.pow(h, 3) / 12;
+  const EI = E * I;
+  // v(x) = q/(24EI) * (x^4 - 4L^3*x + 3L^4)
+  return (q / (24 * EI)) * (Math.pow(x, 4) - 4 * Math.pow(L, 3) * x + 3 * Math.pow(L, 4));
+}
+
+function draw() {
+  const p = getParams();
+  const W = cv.width, H = cv.height;
+  const PL = 70, PR = 30, PT = 30, PB = 50;
+  const plotW = W - PL - PR;
+  const plotH = H - PT - PB;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Compute curves
+  const N = 200;
+  const curves = [
+    { n: 0.5, color: '#e74c3c', label: 'n=0.5', dash: [] },
+    { n: 1.0, color: '#2980b9', label: 'n=1.0', dash: [6, 4] },
+    { n: 0.3, color: '#27ae60', label: 'n=0.3', dash: [] },
+  ];
+
+  const allV = [];
+  const curveData = curves.map(c => {
+    const pts = [];
+    for (let i = 0; i <= N; i++) {
+      const x = (i / N) * p.L;
+      let v;
+      if (c.n === 1.0) {
+        v = v1(x, p.q, p.b, p.h, p.B, p.L);
+      } else {
+        v = vn(x, c.n, p.q, p.b, p.h, p.B, p.L);
+      }
+      pts.push({ x, v });
+      allV.push(v);
+    }
+    return { ...c, pts };
+  });
+
+  const vmin = 0;
+  const vmax = Math.max(...allV) * 1.1 || 0.001;
+
+  // Scale
+  const xToCanv = x => PL + (x / p.L) * plotW;
+  const vToCanv = v => PT + (1 - v / vmax) * plotH;
+
+  // Background
+  ctx.fillStyle = '#f9f9f9';
+  ctx.fillRect(PL, PT, plotW, plotH);
+
+  // Grid
+  ctx.strokeStyle = '#e0e0e0';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 5; i++) {
+    const gy = PT + (i / 5) * plotH;
+    ctx.beginPath(); ctx.moveTo(PL, gy); ctx.lineTo(PL + plotW, gy); ctx.stroke();
+    const vLabel = (vmax * (1 - i / 5)).toFixed(4);
+    ctx.fillStyle = '#888'; ctx.font = '9px Arial'; ctx.textAlign = 'right';
+    ctx.fillText(vLabel, PL - 4, gy + 3);
+  }
+  for (let i = 0; i <= 5; i++) {
+    const gx = PL + (i / 5) * plotW;
+    ctx.beginPath(); ctx.moveTo(gx, PT); ctx.lineTo(gx, PT + plotH); ctx.stroke();
+    const xLabel = (p.L * i / 5).toFixed(1);
+    ctx.fillStyle = '#888'; ctx.font = '9px Arial'; ctx.textAlign = 'center';
+    ctx.fillText(xLabel, gx, PT + plotH + 14);
+  }
+
+  // Beam schematic at top
+  const beamY = PT - 18;
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 3; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(PL, beamY); ctx.lineTo(PL + plotW, beamY); ctx.stroke();
+  // Fixed end (right in plot = x=L)
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 2;
+  for (let i = 0; i < 5; i++) {
+    const bx = PL + plotW - i * 7;
+    ctx.beginPath(); ctx.moveTo(bx, beamY - 8); ctx.lineTo(bx - 6, beamY + 4); ctx.stroke();
+  }
+  // Arrow UDL
+  ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 1;
+  for (let i = 1; i <= 8; i++) {
+    const ax = PL + (i / 9) * plotW;
+    ctx.beginPath(); ctx.moveTo(ax, beamY - 14); ctx.lineTo(ax, beamY - 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ax, beamY - 2); ctx.lineTo(ax - 3, beamY - 7); ctx.lineTo(ax + 3, beamY - 7); ctx.closePath(); ctx.fillStyle = '#e74c3c'; ctx.fill();
+  }
+
+  // Axes labels
+  ctx.fillStyle = '#444'; ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('x（自自由端起算）', PL + plotW / 2, H - 8);
+  ctx.save(); ctx.translate(14, PT + plotH / 2); ctx.rotate(-Math.PI / 2);
+  ctx.fillText('撓度 v（下為正）', 0, 0); ctx.restore();
+
+  // Draw curves
+  curveData.forEach(c => {
+    ctx.strokeStyle = c.color;
+    ctx.lineWidth = c.n === 0.5 ? 2.5 : 1.8;
+    ctx.setLineDash(c.dash);
+    ctx.beginPath();
+    c.pts.forEach((pt, i) => {
+      const cx = xToCanv(pt.x);
+      const cy = vToCanv(pt.v);
+      if (i === 0) ctx.moveTo(cx, cy); else ctx.lineTo(cx, cy);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  // Axes border
+  ctx.strokeStyle = '#999'; ctx.lineWidth = 1;
+  ctx.strokeRect(PL, PT, plotW, plotH);
+
+  // Title
+  ctx.fillStyle = '#333'; ctx.font = 'bold 11px Arial'; ctx.textAlign = 'left';
+  ctx.fillText(`q=${p.q}, b=${p.b}, h=${p.h}, B=${p.B}, L=${p.L}`, PL + 4, PT + 14);
+
+  // Update info
+  const vm05 = vn(0, 0.5, p.q, p.b, p.h, p.B, p.L);
+  const vm10 = v1(0, p.q, p.b, p.h, p.B, p.L);
+  const vm03 = vn(0, 0.3, p.q, p.b, p.h, p.B, p.L);
+  document.getElementById('vmax05').textContent = vm05.toFixed(5);
+  document.getElementById('vmax10').textContent = vm10.toFixed(5);
+  document.getElementById('vmax03').textContent = vm03.toFixed(5);
+}
+
+['qSlider','bSlider','hSlider','BSlider','LSlider'].forEach(id => {
+  const el = document.getElementById(id);
+  const valId = id.replace('Slider', 'Val');
+  el.addEventListener('input', () => {
+    document.getElementById(valId).textContent = el.value;
+    draw();
+  });
+});
+
+draw();
+</script>
+</body>
+</html>

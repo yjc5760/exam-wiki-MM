@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>MM-2020-3 偏心壓縮柱分析</title>
+<style>
+  body { font-family: "Noto Sans TC", sans-serif; background:#f8f8f8; margin:0; padding:12px; }
+  .container { max-width:640px; margin:0 auto; background:#fff; border-radius:8px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.12); }
+  h3 { font-size:15px; margin:0 0 4px 0; color:#333; text-align:center; }
+  .subtitle { font-size:11px; color:#666; text-align:center; margin-bottom:10px; }
+  canvas { display:block; margin:0 auto; }
+  .result-box { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .result-item { flex:1; min-width:120px; background:#eef3ff; border-radius:4px; padding:8px; font-size:11px; text-align:center; }
+  .result-value { font-size:13px; font-weight:bold; color:#1a56db; margin-top:2px; }
+  .note { font-size:10.5px; color:#555; margin-top:10px; background:#f3f3f3; padding:8px; border-radius:4px; line-height:1.7; }
+  .controls { display:flex; gap:10px; align-items:center; margin:8px 0; justify-content:center; flex-wrap:wrap; }
+  label { font-size:12px; color:#444; }
+  input[type=range] { width:120px; }
+  .emax-line { color:#e74c3c; font-weight:bold; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h3>MM-2020-3｜固定-滾支承偏心受壓柱</h3>
+  <p class="subtitle">0.3×0.3 m 石材柱，P=100 N，L=2 m，E=60 GPa</p>
+  <div class="controls">
+    <label>偏心距 e = <span id="eVal">3.0</span> cm</label>
+    <input type="range" id="eSlider" min="0" max="10" step="0.5" value="3" oninput="update()">
+    <span class="emax-line">│ e_max = 5 cm</span>
+  </div>
+  <canvas id="c" width="620" height="400"></canvas>
+  <div class="result-box">
+    <div class="result-item">M_max（上端）<div class="result-value" id="rMmax">3.00 N·m</div></div>
+    <div class="result-item">σ_axial<div class="result-value">1111 Pa</div></div>
+    <div class="result-item">σ_bending（上端）<div class="result-value" id="rSb">667 Pa</div></div>
+    <div class="result-item">σ_max（壓）<div class="result-value" id="rSmax">1778 Pa</div></div>
+  </div>
+  <div class="note">
+    <b>紅色側</b> = 拉應力；<b>藍色側</b> = 壓應力。當 e &gt; 5 cm（核心距 b/6）時，上端出現拉應力（紅色應力圖超出零線）。<br>
+    <b>H_B = 3Pe/(2L)</b> = 上端滾支承水平反力，使上端彎矩 M = Pe，固定端彎矩 = Pe/2。
+  </div>
+</div>
+<script>
+const P = 100, A = 0.09, I = 6.75e-4, c = 0.15, L = 2;
+const b = 0.3;
+const eMax_kern = I / (A * c); // 0.05 m
+
+function M(x, e) {
+  // x from bottom (0 to L)
+  return -P*e/2 + 3*P*e*x/(2*L);
+}
+
+function update() {
+  const eSlider = document.getElementById('eSlider');
+  const e = parseFloat(eSlider.value) / 100; // cm to m
+  document.getElementById('eVal').textContent = (e*100).toFixed(1);
+
+  const Mmax = P * e; // at top
+  const sb = Mmax * c / I;
+  const sa = P / A;
+  const smax = sa + sb;
+
+  document.getElementById('rMmax').textContent = Mmax.toFixed(2) + ' N·m';
+  document.getElementById('rSb').textContent = sb.toFixed(0) + ' Pa';
+  document.getElementById('rSmax').textContent = smax.toFixed(0) + ' Pa';
+
+  draw(e);
+}
+
+function draw(e) {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const W = 620, H = 400;
+  ctx.clearRect(0, 0, W, H);
+
+  // Layout: column on left, moment diagram in center, stress diagram on right
+  const colX = 120;  // column centerline x
+  const colTop = 50, colBot = 350;
+  const colH = colBot - colTop;  // pixels for L=2m
+  const scaleY = colH / L; // pixels per meter
+
+  // --- Draw column ---
+  const colW = 30; // visual width of column
+  ctx.fillStyle = '#ddd';
+  ctx.fillRect(colX - colW/2, colTop, colW, colH);
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(colX - colW/2, colTop, colW, colH);
+
+  // Fixed support at bottom
+  ctx.fillStyle = '#888';
+  ctx.fillRect(colX - 40, colBot, 80, 14);
+  for (let i = 0; i < 6; i++) {
+    const xx = (colX - 40) + i*14;
+    ctx.beginPath(); ctx.moveTo(xx, colBot+14); ctx.lineTo(xx-10, colBot+24); ctx.stroke();
+  }
+
+  // Roller support at top
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(colX, colTop); ctx.lineTo(colX, colTop - 15); ctx.stroke();
+  ctx.beginPath(); ctx.arc(colX, colTop - 20, 5, 0, 2*Math.PI); ctx.stroke();
+  // wall
+  ctx.fillStyle = '#aaa';
+  ctx.fillRect(colX - 50, colTop - 30, 15, 30);
+  for (let i = 0; i < 4; i++) {
+    const yy = (colTop - 30) + i*8;
+    ctx.beginPath(); ctx.moveTo(colX-50, yy); ctx.lineTo(colX-60, yy+10); ctx.stroke();
+  }
+
+  // Eccentric load arrow at top
+  const ePixels = e * 400; // scale for visualization
+  const arrowX = colX + Math.min(ePixels, 60) + 8;
+  ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(arrowX, colTop - 50); ctx.lineTo(arrowX, colTop); ctx.stroke();
+  // arrowhead
+  ctx.fillStyle = '#e67e22';
+  ctx.beginPath(); ctx.moveTo(arrowX, colTop); ctx.lineTo(arrowX-6, colTop-14); ctx.lineTo(arrowX+6, colTop-14); ctx.closePath(); ctx.fill();
+  ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('P', arrowX, colTop - 55);
+  // eccentricity marker
+  ctx.setLineDash([3,2]); ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(colX, colTop - 10); ctx.lineTo(arrowX, colTop - 10); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(`e=${(e*100).toFixed(1)}cm`, (colX+arrowX)/2, colTop - 15);
+
+  // H_B reaction arrow
+  const HB = 3*P*e/(2*L);
+  const arrowLen = Math.min(HB * 600, 50);
+  ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(colX - colW/2 - arrowLen - 5, colTop); ctx.lineTo(colX - colW/2 - 5, colTop); ctx.stroke();
+  ctx.fillStyle = '#27ae60';
+  ctx.beginPath(); ctx.moveTo(colX-colW/2-5, colTop); ctx.lineTo(colX-colW/2-16, colTop-5); ctx.lineTo(colX-colW/2-16, colTop+5); ctx.closePath(); ctx.fill();
+  ctx.font = '9px sans-serif'; ctx.textAlign = 'right';
+  ctx.fillText(`H_B=${HB.toFixed(2)}N`, colX-colW/2-arrowLen-8, colTop+12);
+
+  // Labels A (bottom), B (top)
+  ctx.fillStyle = '#333'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'right';
+  ctx.fillText('A (固)', colX - colW/2 - 5, colBot + 8);
+  ctx.fillText('B (滾)', colX - colW/2 - 5, colTop + 4);
+
+  // --- Bending Moment Diagram ---
+  const mdX = 230; // center x for moment diagram
+  const scaleM = 80 / (P * eMax_kern * 1.2); // pixels per N·m
+
+  ctx.fillStyle = '#aaa'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('彎矩 M(x)', mdX, colTop - 8);
+
+  // Zero axis for moment diagram
+  ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(mdX, colTop); ctx.lineTo(mdX, colBot); ctx.stroke();
+  ctx.fillStyle = '#999'; ctx.font = '8px sans-serif';
+  ctx.fillText('0', mdX, colBot + 12);
+
+  // Draw moment diagram (linear from bottom to top)
+  const M_bot = M(0, e);   // at x=0
+  const M_top = M(L, e);   // at x=L
+
+  const mBotPx = M_bot * scaleM; // positive = right
+  const mTopPx = M_top * scaleM;
+
+  ctx.beginPath();
+  ctx.moveTo(mdX, colBot);           // bottom, zero
+  ctx.lineTo(mdX + mBotPx, colBot);  // bottom, M value
+  ctx.lineTo(mdX + mTopPx, colTop);  // top, M value
+  ctx.lineTo(mdX, colTop);           // top, zero
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(52,152,219,0.25)'; ctx.fill();
+  ctx.strokeStyle = '#2980b9'; ctx.lineWidth = 2; ctx.stroke();
+
+  // M labels
+  ctx.fillStyle = '#2980b9'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText(`${(M_top).toFixed(2)}N·m`, mdX + mTopPx + 4, colTop + 4);
+  ctx.textAlign = mBotPx < 0 ? 'right' : 'left';
+  ctx.fillText(`${(M_bot).toFixed(2)}N·m`, mdX + mBotPx + (mBotPx < 0 ? -4 : 4), colBot - 4);
+
+  // Zero crossing
+  if (M_bot * M_top < 0) {
+    const xZero = L * (-M_bot) / (M_top - M_bot); // from bottom
+    const yZero = colBot - xZero * scaleY;
+    ctx.fillStyle = '#e74c3c';
+    ctx.beginPath(); ctx.arc(mdX, yZero, 3, 0, 2*Math.PI); ctx.fill();
+    ctx.fillStyle = '#e74c3c'; ctx.font = '8px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(`x=${(xZero).toFixed(2)}m`, mdX + 4, yZero - 3);
+  }
+
+  // --- Stress Diagram at Top Section ---
+  const sX = 430; // center x for stress diagram
+  const sa = P / A; // axial (compressive)
+  const sbTop = Math.abs(M_top) * c / I; // bending at top
+
+  const scaleS = 60 / (sa + P * eMax_kern * c / I * 1.1);
+  ctx.fillStyle = '#aaa'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('上端應力分佈', sX, colTop - 8);
+
+  // Cross section rectangle
+  const secW = 40, secH = 100;
+  const secX = sX - secW/2, secY = colTop + 20;
+  ctx.fillStyle = '#f0f0f0';
+  ctx.fillRect(secX, secY, secW, secH);
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(secX, secY, secW, secH);
+  ctx.fillStyle = '#888'; ctx.font = '8px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('0.3m', sX, secY + secH + 12);
+
+  // Stress distribution at top
+  // Left fiber: -sa + sbTop (tension if sbTop > sa)
+  // Right fiber (eccentric side): -sa - sbTop (compression)
+  const sigLeft = -sa + sbTop;   // tension positive, compression negative
+  const sigRight = -sa - sbTop;
+
+  const pxLeft = sigLeft * scaleS;   // positive = rightward from left edge
+  const pxRight = sigRight * scaleS; // negative = leftward from right edge
+
+  // Draw trapezoid stress block
+  // At left edge: sigLeft (rightward if tension, leftward if compression)
+  // At right edge: sigRight (negative = compression, leftward)
+
+  const leftX = secX;
+  const rightX = secX + secW;
+  const midY = secY + secH/2;
+
+  // Build the stress polygon
+  ctx.beginPath();
+  ctx.moveTo(leftX, secY);
+  ctx.lineTo(leftX + pxLeft, secY);
+  ctx.lineTo(rightX + pxRight, secY);  // Note: pxRight is negative (left of right edge)
+  ctx.lineTo(rightX, secY);
+  ctx.closePath();
+  // Color by sign
+  if (sigLeft >= 0) {
+    ctx.fillStyle = 'rgba(231,76,60,0.3)'; // tension = red
+  } else {
+    ctx.fillStyle = 'rgba(52,152,219,0.3)'; // compression = blue
+  }
+  ctx.fill();
+  ctx.strokeStyle = '#2980b9'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // Repeat for bottom of section
+  ctx.beginPath();
+  ctx.moveTo(leftX, secY + secH);
+  ctx.lineTo(leftX + pxLeft, secY + secH);
+  ctx.lineTo(rightX + pxRight, secY + secH);
+  ctx.lineTo(rightX, secY + secH);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(52,152,219,0.3)';
+  ctx.fill(); ctx.stroke();
+
+  // Connect (trapezoid)
+  ctx.beginPath();
+  ctx.moveTo(leftX + pxLeft, secY);
+  ctx.lineTo(leftX + pxLeft, secY + secH);
+  ctx.strokeStyle = sigLeft >= 0 ? '#e74c3c' : '#2980b9';
+  ctx.lineWidth = 2; ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(rightX + pxRight, secY);
+  ctx.lineTo(rightX + pxRight, secY + secH);
+  ctx.strokeStyle = '#2980b9'; ctx.lineWidth = 2; ctx.stroke();
+
+  // Stress labels
+  ctx.font = '9px sans-serif';
+  if (sigLeft >= 0) {
+    ctx.fillStyle = '#e74c3c'; ctx.textAlign = 'right';
+    ctx.fillText(`+${sigLeft.toFixed(0)}Pa(拉)`, leftX + pxLeft - 2, midY);
+  } else {
+    ctx.fillStyle = '#2980b9'; ctx.textAlign = 'right';
+    ctx.fillText(`${sigLeft.toFixed(0)}Pa`, leftX + pxLeft - 2, midY);
+  }
+  ctx.fillStyle = '#c0392b'; ctx.textAlign = 'left';
+  ctx.fillText(`${sigRight.toFixed(0)}Pa(壓)`, rightX + pxRight + 2, midY);
+
+  // Zero line on stress diagram
+  if (sigLeft * sigRight < 0) {
+    const zeroX = secX + secW * (-sigLeft) / (sigRight - sigLeft); // wait, from left to right
+    // Actually linear interpolation: stress at position t from left = sigLeft + t*(sigRight - sigLeft)/(secW) * secW
+    // zero when: sigLeft + t*(sigRight-sigLeft) = 0 → t = -sigLeft/(sigRight-sigLeft)
+    const t = -sigLeft / (sigRight - sigLeft);
+    const zX = secX + t * secW;
+    ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 1.5; ctx.setLineDash([2,2]);
+    ctx.beginPath(); ctx.moveTo(zX, secY-5); ctx.lineTo(zX, secY+secH+5); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#e74c3c'; ctx.textAlign = 'center'; ctx.font = '8px sans-serif';
+    ctx.fillText('零應力線', zX, secY + secH + 16);
+  }
+
+  // e_max line indicator
+  if (e > eMax_kern * 1.05) {
+    ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('⚠ 出現拉應力!', sX, secY + secH + 28);
+  } else {
+    ctx.fillStyle = '#27ae60'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('全截面受壓 ✓', sX, secY + secH + 28);
+  }
+
+  // Title annotations
+  ctx.fillStyle = '#333'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(`e = ${(e*100).toFixed(1)}cm | e_max = 5cm`, W/2, H - 10);
+}
+
+update();
+</script>
+</body>
+</html>

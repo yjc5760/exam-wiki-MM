@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>MM-2008-1 剪力圖與彎矩圖動態示意</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
+    background: #0f172a;
+    color: #f8fafc;
+    margin: 0;
+    padding: 12px;
+    width: 580px;
+    box-sizing: border-box;
+  }
+  h2 {
+    color: #38bdf8;
+    text-align: center;
+    font-size: 16px;
+    margin: 0 0 10px;
+  }
+  .panel {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+  .panel-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #ffd166;
+    margin-bottom: 8px;
+    border-left: 3px solid #ff9f1c;
+    padding-left: 6px;
+  }
+  canvas {
+    display: block;
+    background: #111827;
+    border-radius: 6px;
+    margin: 0 auto;
+    border: 1px solid #1e293b;
+  }
+  .info {
+    font-size: 11px;
+    color: #cbd5e1;
+    margin-top: 8px;
+    line-height: 1.6;
+  }
+  .highlight {
+    color: #ff9f1c;
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+<h2>MM-2008-1 桿件 AB 之剪力圖 (SFD) 與彎矩圖 (BMD)</h2>
+
+<!-- Panel (a) -->
+<div class="panel">
+  <div class="panel-title">圖一（a）：T 型剛架偏心受力梁</div>
+  <canvas id="canvasA" width="540" height="240"></canvas>
+  <div class="info">
+    <span class="highlight">力學特性：</span>
+    D 點的 60 kN 向下力等效至 C 點為 <span class="highlight">60 kN 向下力</span> 與 <span class="highlight">120 kN·m 順時針力偶矩</span>。<br>
+    - SFD 在 C 點發生 <span class="highlight">-60 kN</span> 的突變。<br>
+    - BMD 在 C 點因順時針力偶矩而發生 <span class="highlight">+120 kN·m</span> 的突增跳躍。
+  </div>
+</div>
+
+<!-- Panel (b) -->
+<div class="panel">
+  <div class="panel-title">圖一（b）：內鉸組合梁</div>
+  <canvas id="canvasB" width="540" height="240"></canvas>
+  <div class="info">
+    <span class="highlight">力學特性：</span>
+    內鉸 C 處彎矩恆為零 ($M_C = 0$)。<br>
+    - 剪力於全跨連續（無集中載重作用於 C），在 $x = 6.5\text{ m}$ 處為 0。<br>
+    - BMD 在 C 點處彎矩歸零，最大正彎矩出現在簡支段剪力為零點（$x = 6.5\text{ m}$），大小為 <span class="highlight">11.25 kN·m</span>。
+  </div>
+</div>
+
+<script>
+// =========================================================
+// Canvas A: T-bracket beam
+// =========================================================
+(function(){
+  const cv = document.getElementById('canvasA');
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+
+  // Layout parameters
+  const ml = 50, mr = 30;
+  const L_tot = 10;
+  const sx = x => ml + (W - ml - mr) * (x / L_tot);
+
+  // Clear background
+  ctx.fillStyle = '#111827';
+  ctx.fillRect(0, 0, W, H);
+
+  // 1. Structure diagram (y = 45)
+  const yb = 45;
+  
+  // Supports
+  ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1.5;
+  // Pin support A (x=0)
+  ctx.beginPath();
+  ctx.moveTo(sx(0), yb); ctx.lineTo(sx(0)-8, yb+12); ctx.lineTo(sx(0)+8, yb+12); ctx.closePath();
+  ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx(0)-12, yb+12); ctx.lineTo(sx(0)+12, yb+12); ctx.stroke();
+  for (let i=-10; i<=10; i+=4) {
+    ctx.beginPath(); ctx.moveTo(sx(0)+i, yb+12); ctx.lineTo(sx(0)+i-3, yb+16); ctx.stroke();
+  }
+  
+  // Roller support B (x=10)
+  ctx.beginPath();
+  ctx.moveTo(sx(10), yb); ctx.lineTo(sx(10)-8, yb+12); ctx.lineTo(sx(10)+8, yb+12); ctx.closePath();
+  ctx.stroke();
+  ctx.beginPath(); ctx.arc(sx(10)-4, yb+14, 2, 0, 7); ctx.arc(sx(10)+4, yb+14, 2, 0, 7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx(10)-12, yb+16); ctx.lineTo(sx(10)+12, yb+16); ctx.stroke();
+  for (let i=-10; i<=10; i+=4) {
+    ctx.beginPath(); ctx.moveTo(sx(10)+i, yb+16); ctx.lineTo(sx(10)+i-3, yb+20); ctx.stroke();
+  }
+
+  // Beam line
+  ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(sx(0), yb); ctx.lineTo(sx(10), yb); ctx.stroke();
+
+  // T-bracket at C (x=6)
+  ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(sx(6), yb);
+  ctx.lineTo(sx(6), yb - 20); // vertical up
+  ctx.lineTo(sx(8), yb - 20); // horizontal right
+  ctx.stroke();
+
+  // Load arrow 60 kN at D (x=8, y=yb-20)
+  ctx.strokeStyle = '#f43f5e'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(sx(8), yb - 38);
+  ctx.lineTo(sx(8), yb - 23);
+  ctx.stroke();
+  ctx.fillStyle = '#f43f5e';
+  ctx.beginPath();
+  ctx.moveTo(sx(8), yb - 20);
+  ctx.lineTo(sx(8)-4, yb - 25);
+  ctx.lineTo(sx(8)+4, yb - 25);
+  ctx.closePath();
+  ctx.fill();
+
+  // Text labels
+  ctx.font = '10px sans-serif';
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillText('A', sx(0)-4, yb - 6);
+  ctx.fillText('B', sx(10)+4, yb - 6);
+  ctx.fillText('C', sx(6)-4, yb + 11);
+  ctx.fillText('D', sx(8)+5, yb - 24);
+  ctx.fillStyle = '#f43f5e';
+  ctx.fillText('60 kN', sx(8)-15, yb - 42);
+
+  // Dimensions
+  ctx.strokeStyle = '#475569'; ctx.lineWidth = 0.8;
+  const yd = yb + 28;
+  // A to C (6m)
+  ctx.beginPath(); ctx.moveTo(sx(0), yb+6); ctx.lineTo(sx(0), yd+4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx(6), yb+14); ctx.lineTo(sx(6), yd+4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx(0)+4, yd); ctx.lineTo(sx(6)-4, yd); ctx.stroke();
+  ctx.fillStyle = '#94a3b8'; ctx.fillText('6 m', sx(3)-10, yd-3);
+  // C to D (2m)
+  ctx.beginPath(); ctx.moveTo(sx(8), yb-15); ctx.lineTo(sx(8), yd+4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx(6)+4, yd); ctx.lineTo(sx(8)-4, yd); ctx.stroke();
+  ctx.fillText('2 m', sx(7)-10, yd-3);
+  // D to B (2m)
+  ctx.beginPath(); ctx.moveTo(sx(10), yb+6); ctx.lineTo(sx(10), yd+4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx(8)+4, yd); ctx.lineTo(sx(10)-4, yd); ctx.stroke();
+  ctx.fillText('2 m', sx(9)-10, yd-3);
+
+  // 2. SFD (y = 125)
+  const ys = 125;
+  ctx.strokeStyle = '#475569'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(sx(0), ys); ctx.lineTo(sx(10), ys); ctx.stroke();
+  ctx.fillStyle = '#94a3b8'; ctx.fillText('SFD (kN)', 8, ys - 15);
+
+  // Draw SFD shape
+  // V = 12 (x=0 to 6), V = -48 (x=6 to 10)
+  const sc_s = 0.6; // scale 1 kN = 0.6 px
+  ctx.fillStyle = 'rgba(59, 130, 246, 0.18)';
+  ctx.beginPath();
+  ctx.moveTo(sx(0), ys);
+  ctx.lineTo(sx(0), ys - 12*sc_s);
+  ctx.lineTo(sx(6), ys - 12*sc_s);
+  ctx.lineTo(sx(6), ys + 48*sc_s);
+  ctx.lineTo(sx(10), ys + 48*sc_s);
+  ctx.lineTo(sx(10), ys);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(sx(0), ys);
+  ctx.lineTo(sx(0), ys - 12*sc_s);
+  ctx.lineTo(sx(6), ys - 12*sc_s);
+  ctx.lineTo(sx(6), ys + 48*sc_s);
+  ctx.lineTo(sx(10), ys + 48*sc_s);
+  ctx.lineTo(sx(10), ys);
+  ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = '#38bdf8';
+  ctx.fillText('+12', sx(2), ys - 12*sc_s - 4);
+  ctx.fillText('-48', sx(8), ys + 48*sc_s + 10);
+
+  // 3. BMD (y = 205)
+  const ym = 205;
+  ctx.strokeStyle = '#475569'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(sx(0), ym); ctx.lineTo(sx(10), ym); ctx.stroke();
+  ctx.fillStyle = '#94a3b8'; ctx.fillText('BMD (kN·m)', 8, ym - 15);
+
+  // BMD values: M(0)=0, M(6-)=72, M(6+)=192, M(10)=0
+  const sc_m = 0.18; // scale 1 kN.m = 0.18 px
+  ctx.fillStyle = 'rgba(16, 185, 129, 0.18)';
+  ctx.beginPath();
+  ctx.moveTo(sx(0), ym);
+  ctx.lineTo(sx(6), ym - 72*sc_m);
+  ctx.lineTo(sx(6), ym - 192*sc_m);
+  ctx.lineTo(sx(10), ym);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = '#10b981'; ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(sx(0), ym);
+  ctx.lineTo(sx(6), ym - 72*sc_m);
+  ctx.lineTo(sx(6), ym - 192*sc_m);
+  ctx.lineTo(sx(10), ym);
+  ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = '#34d399';
+  ctx.fillText('0', sx(0)-10, ym+3);
+  ctx.fillText('+72', sx(6)-25, ym - 72*sc_m + 3);
+  ctx.fillText('+192', sx(6)-30, ym - 192*sc_m - 3);
+  ctx.fillText('0', sx(10)+5, ym+3);
+  
+  // Jump line indicator
+  ctx.strokeStyle = '#ffd166'; ctx.setLineDash([2,2]);
+  ctx.beginPath(); ctx.moveTo(sx(6), ym - 72*sc_m); ctx.lineTo(sx(6), ym - 192*sc_m); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#ffd166';
+  ctx.fillText('跳躍 +120', sx(6)+6, ym - 130*sc_m);
+})();
+
+// =========================================================
+// Canvas B: Hinge beam
+// =========================================================
+(function(){
+  const cv = document.getElementById('canvasB');
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+
+  // Layout parameters
+  const ml = 50, mr = 30;
+  const L_tot = 8;
+  const sx = x => ml + (W - ml - mr) * (x / L_tot);
+
+  // Clear background
+  ctx.fillStyle = '#111827';
+  ctx.fillRect(0, 0, W, H);
+
+  // 1. Structure diagram (y = 45)
+  const yb = 45;
+
+  // Fixed support A (x=0)
+  ctx.strokeStyle = '#64748b'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(sx(0), yb-15); ctx.lineTo(sx(0), yb+15); ctx.stroke();
+  for (let y = yb-15; y <= yb+15; y+=4) {
+    ctx.beginPath(); ctx.moveTo(sx(0), y); ctx.lineTo(sx(0)-5, y+3); ctx.stroke();
+  }
+
+  // Roller support B (x=8)
+  ctx.beginPath();
+  ctx.moveTo(sx(8), yb); ctx.lineTo(sx(8)-8, yb+12); ctx.lineTo(sx(8)+8, yb+12); ctx.closePath();
+  ctx.stroke();
+  ctx.beginPath(); ctx.arc(sx(8)-4, yb+14, 2, 0, 7); ctx.arc(sx(8)+4, yb+14, 2, 0, 7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx(8)-12, yb+16); ctx.lineTo(sx(8)+12, yb+16); ctx.stroke();
+  for (let i=-10; i<=10; i+=4) {
+    ctx.beginPath(); ctx.moveTo(sx(8)+i, yb+16); ctx.lineTo(sx(8)+i-3, yb+20); ctx.stroke();
+  }
+
+  // Beam line
+  ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(sx(0), yb); ctx.lineTo(sx(8), yb); ctx.stroke();
+
+  // Internal hinge C (x=5)
+  ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(sx(5), yb, 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+  // Uniform load 10 kN/m (q)
+  ctx.strokeStyle = '#c084fc'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(sx(0), yb-20); ctx.lineTo(sx(8), yb-20); ctx.stroke();
+  for (let x=0; x<=8; x+=0.5) {
+    // Arrow lines
+    ctx.beginPath(); ctx.moveTo(sx(x), yb-20); ctx.lineTo(sx(x), yb-3); ctx.stroke();
+    // Arrow head
+    ctx.fillStyle = '#c084fc';
+    ctx.beginPath();
+    ctx.moveTo(sx(x), yb-2);
+    ctx.lineTo(sx(x)-2, yb-5);
+    ctx.lineTo(sx(x)+2, yb-5);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Text labels
+  ctx.font = '10px sans-serif';
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillText('A', sx(0)-14, yb + 4);
+  ctx.fillText('B', sx(8)+5, yb + 4);
+  ctx.fillText('C (內鉸)', sx(5)-18, yb + 16);
+  ctx.fillStyle = '#c084fc';
+  ctx.fillText('q = 10 kN/m', sx(4)-30, yb - 26);
+
+  // Dimensions
+  ctx.strokeStyle = '#475569'; ctx.lineWidth = 0.8;
+  const yd = yb + 28;
+  // A to C (5m)
+  ctx.beginPath(); ctx.moveTo(sx(0), yb+6); ctx.lineTo(sx(0), yd+4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx(5), yb+14); ctx.lineTo(sx(5), yd+4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx(0)+4, yd); ctx.lineTo(sx(5)-4, yd); ctx.stroke();
+  ctx.fillStyle = '#94a3b8'; ctx.fillText('5 m', sx(2.5)-10, yd-3);
+  // C to B (3m)
+  ctx.beginPath(); ctx.moveTo(sx(8), yb+6); ctx.lineTo(sx(8), yd+4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx(5)+4, yd); ctx.lineTo(sx(8)-4, yd); ctx.stroke();
+  ctx.fillText('3 m', sx(6.5)-10, yd-3);
+
+  // 2. SFD (y = 125)
+  const ys = 125;
+  ctx.strokeStyle = '#475569'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(sx(0), ys); ctx.lineTo(sx(8), ys); ctx.stroke();
+  ctx.fillStyle = '#94a3b8'; ctx.fillText('SFD (kN)', 8, ys - 15);
+
+  // V(0)=65, V(5)=15, V(8)=-15. V(6.5)=0
+  const sc_s = 0.45; // scale 1 kN = 0.45 px
+  ctx.fillStyle = 'rgba(59, 130, 246, 0.18)';
+  ctx.beginPath();
+  ctx.moveTo(sx(0), ys);
+  ctx.lineTo(sx(0), ys - 65*sc_s);
+  ctx.lineTo(sx(5), ys - 15*sc_s);
+  ctx.lineTo(sx(8), ys + 15*sc_s);
+  ctx.lineTo(sx(8), ys);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(sx(0), ys - 65*sc_s);
+  ctx.lineTo(sx(8), ys + 15*sc_s);
+  ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = '#38bdf8';
+  ctx.fillText('+65', sx(0)+4, ys - 65*sc_s - 3);
+  ctx.fillText('+15', sx(5)-4, ys - 15*sc_s - 4);
+  ctx.fillText('-15', sx(8)-22, ys + 15*sc_s + 11);
+
+  // 3. BMD (y = 205)
+  const ym = 205;
+  ctx.strokeStyle = '#475569'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(sx(0), ym); ctx.lineTo(sx(8), ym); ctx.stroke();
+  ctx.fillStyle = '#94a3b8'; ctx.fillText('BMD (kN·m)', 8, ym - 15);
+
+  // M(0)=-200, M(5)=0, M(6.5)=11.25, M(8)=0
+  const sc_m = 0.18; // scale 1 kN.m = 0.18 px
+
+  // Draw BMD curve
+  ctx.fillStyle = 'rgba(16, 185, 129, 0.18)';
+  ctx.beginPath();
+  ctx.moveTo(sx(0), ym);
+  for (let x=0; x<=8; x+=0.05) {
+    let m = 0;
+    if (x < 5) {
+      m = -200 + 65*x - 5*x*x;
+    } else {
+      let x_loc = x - 5;
+      m = 15*x_loc - 5*x_loc*x_loc;
+    }
+    ctx.lineTo(sx(x), ym - m*sc_m);
+  }
+  ctx.lineTo(sx(8), ym);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = '#10b981'; ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  for (let x=0; x<=8; x+=0.05) {
+    let m = 0;
+    if (x < 5) {
+      m = -200 + 65*x - 5*x*x;
+    } else {
+      let x_loc = x - 5;
+      m = 15*x_loc - 5*x_loc*x_loc;
+    }
+    if (x === 0) ctx.moveTo(sx(x), ym - m*sc_m);
+    else ctx.lineTo(sx(x), ym - m*sc_m);
+  }
+  ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = '#34d399';
+  ctx.fillText('-200', sx(0)+4, ym + 200*sc_m + 11);
+  ctx.fillText('0', sx(5)-4, ym + 11);
+  ctx.fillText('+11.25', sx(6.5)-15, ym - 11.25*sc_m - 4);
+  ctx.fillText('0', sx(8)-10, ym + 11);
+})();
+</script>
+</body>
+</html>

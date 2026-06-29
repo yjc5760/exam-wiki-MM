@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>MM-2020-1 兩桿桁架位移分析</title>
+<style>
+  body { font-family: "Noto Sans TC", sans-serif; background:#f8f8f8; margin:0; padding:12px; }
+  .container { max-width:600px; margin:0 auto; background:#fff; border-radius:8px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.12); }
+  h3 { font-size:15px; margin:0 0 4px 0; color:#333; text-align:center; }
+  .subtitle { font-size:11px; color:#666; text-align:center; margin-bottom:10px; }
+  canvas { display:block; width:100%; }
+  .result-box { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .result-item { flex:1; min-width:130px; background:#eef3ff; border-radius:4px; padding:8px; font-size:11px; text-align:center; }
+  .result-value { font-size:14px; font-weight:bold; color:#1a56db; margin-top:2px; }
+  .note { font-size:10.5px; color:#555; margin-top:10px; background:#f3f3f3; padding:8px; border-radius:4px; line-height:1.7; }
+  .controls { display:flex; gap:10px; align-items:center; margin:10px 0; justify-content:center; flex-wrap:wrap; }
+  .btn { padding:5px 14px; border:1.5px solid #2980b9; border-radius:4px; cursor:pointer; font-size:12px; background:#fff; color:#2980b9; }
+  .btn.active { background:#2980b9; color:#fff; }
+  label { font-size:12px; color:#444; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h3>MM-2020-1｜兩桿桁架位移分析</h3>
+  <p class="subtitle">E=210 GPa，A=9 cm²，B 距樓板 1m，外力 100N∠60°（水平左下）</p>
+  <div class="controls">
+    <label>位移放大倍數：</label>
+    <button class="btn" onclick="setScale(5e5)">×5×10⁵</button>
+    <button class="btn active" onclick="setScale(1e6)">×10⁶</button>
+    <button class="btn" onclick="setScale(3e6)">×3×10⁶</button>
+  </div>
+  <canvas id="c" height="380"></canvas>
+  <div class="result-box">
+    <div class="result-item">F_AB<div class="result-value">0 N</div></div>
+    <div class="result-item">F_BC<div class="result-value">100 N (拉)</div></div>
+    <div class="result-item">δ_BC<div class="result-value">6.11×10⁻⁷ m</div></div>
+    <div class="result-item">|δBx|=|δBy|<div class="result-value">4.47×10⁻⁷ m</div></div>
+  </div>
+  <div class="note">
+    <b>關鍵洞察：</b>外力 100N 方向（水平左下 60°）恰與 BC 桿軸線 <b>反向平行</b>，
+    故 AB 桿零力（零伸長）；B 點位移方向垂直於 AB 桿（左下 45°），故水平 = 垂直位移。<br>
+    <b>精確值：</b> |δBx| = |δBy| = (√3−1) × δBC = <b>4.47×10⁻⁷ m = 4.47×10⁻⁴ mm</b>
+  </div>
+</div>
+<script>
+const canvas = document.getElementById('c');
+const dpr = window.devicePixelRatio || 1;
+const W = canvas.parentElement.offsetWidth - 32;
+const H = 380;
+canvas.style.width = W + 'px';
+canvas.style.height = H + 'px';
+canvas.width = W * dpr;
+canvas.height = H * dpr;
+const ctx = canvas.getContext('2d');
+ctx.scale(dpr, dpr);
+
+// Physical coordinates (m): A=(-1,1), B=(0,0), C=(1/√3,1) relative to B
+const sqrt3 = Math.sqrt(3);
+const Ax = -1, Ay = 1;
+const Bx = 0, By = 0;
+const Cx = 1/sqrt3, Cy = 1;
+
+// Canvas mapping: B at center-ish
+const PAD = 50;
+const xspan = Cx - Ax + 0.6;
+const yspan = 1.4;
+const scale_x = (W - 2*PAD) / xspan;
+const scale_y = (H - 2*PAD - 60) / yspan;
+const sc = Math.min(scale_x, scale_y);
+const ox = PAD - Ax * sc; // offset: x_canvas = ox + x_phys * sc
+const oy = PAD + Cy * sc + 0.2*sc;  // offset: y_canvas = oy - y_phys * sc
+
+function toC(x, y) { return [ox + x*sc, oy - y*sc]; }
+
+// Displacement scale
+let dispScale = 1e6;
+function setScale(s) {
+  dispScale = s;
+  document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  draw();
+}
+
+// Physical displacement of B
+const EA = 210e9 * 9e-4;
+const L_BC = 2/sqrt3;
+const dBC = 100 * L_BC / EA;  // 6.11e-7 m
+const dBx = -(sqrt3-1) * dBC;  // leftward (negative x)
+const dBy = -(sqrt3-1) * dBC;  // downward (negative y)
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Ceiling
+  const [cAx, cAy] = toC(Ax, Ay);
+  const [cCx, cCy] = toC(Cx, Cy);
+  ctx.fillStyle = '#ccc';
+  ctx.fillRect(cAx - 30, 0, cCx - cAx + 60, 18);
+  for (let i = 0; i < 20; i++) {
+    const xx = (cAx - 30) + i * 15;
+    ctx.strokeStyle = '#999'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(xx, 0); ctx.lineTo(xx - 12, 14); ctx.stroke();
+  }
+  ctx.fillStyle = '#555'; ctx.fillRect(cAx - 30, 14, cCx - cAx + 60, 4);
+
+  // Deformed position of B
+  const Bx_def = Bx + dBx * dispScale;
+  const By_def = By + dBy * dispScale;
+  const [cBd_x, cBd_y] = toC(Bx_def, By_def);
+  const [cBx, cBy] = toC(Bx, By);
+
+  // Draw deformed bars (dashed, light)
+  ctx.setLineDash([5,4]);
+  ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(cAx, cAy); ctx.lineTo(cBd_x, cBd_y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cCx, cCy); ctx.lineTo(cBd_x, cBd_y); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Draw original bars
+  // Bar AB: zero force → gray
+  ctx.strokeStyle = '#999'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(cAx, cAy); ctx.lineTo(cBx, cBy); ctx.stroke();
+  // Bar BC: tension → blue
+  ctx.strokeStyle = '#2980b9'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(cCx, cCy); ctx.lineTo(cBx, cBy); ctx.stroke();
+
+  // Bar labels
+  ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+  // AB midpoint
+  ctx.fillStyle = '#777';
+  ctx.fillText('F_AB = 0', (cAx+cBx)/2 - 18, (cAy+cBy)/2);
+  // BC midpoint
+  ctx.fillStyle = '#2980b9';
+  ctx.fillText('F_BC = 100 N', (cCx+cBx)/2 + 22, (cCy+cBy)/2);
+
+  // Angle labels
+  ctx.font = '10px sans-serif'; ctx.fillStyle = '#555';
+  ctx.textAlign = 'center';
+  ctx.fillText('45°', cAx + 22, cAy + 16);
+  ctx.fillText('60°', cCx - 18, cCy + 16);
+
+  // Support symbols at A and C
+  [cAx, cCx].forEach(cx => {
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(cx, cAy, 5, 0, 2*Math.PI); ctx.fillStyle='#fff'; ctx.fill(); ctx.stroke();
+  });
+
+  // Draw B (original)
+  ctx.beginPath();
+  ctx.arc(cBx, cBy, 6, 0, 2*Math.PI);
+  ctx.fillStyle = '#333'; ctx.fill();
+  ctx.fillStyle = '#333'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('B', cBx + 8, cBy - 6);
+
+  // Draw B (deformed)
+  ctx.beginPath();
+  ctx.arc(cBd_x, cBd_y, 5, 0, 2*Math.PI);
+  ctx.fillStyle = '#e74c3c'; ctx.fill();
+  ctx.fillStyle = '#e74c3c'; ctx.font = '10px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText("B'（放大）", cBd_x + 7, cBd_y + 4);
+
+  // Displacement arrow
+  ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 1.5;
+  ctx.setLineDash([3,2]);
+  ctx.beginPath(); ctx.moveTo(cBx, cBy); ctx.lineTo(cBd_x, cBd_y); ctx.stroke();
+  ctx.setLineDash([]);
+  // Arrow components
+  ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 1;
+  // horizontal component
+  ctx.beginPath(); ctx.moveTo(cBx, cBy); ctx.lineTo(cBd_x, cBy); ctx.stroke();
+  ctx.fillStyle = '#c0392b'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('δBx', (cBx+cBd_x)/2, cBy - 5);
+  // vertical component
+  ctx.beginPath(); ctx.moveTo(cBd_x, cBy); ctx.lineTo(cBd_x, cBd_y); ctx.stroke();
+  ctx.textAlign = 'left';
+  ctx.fillText('δBy', cBd_x + 4, (cBy+cBd_y)/2 + 4);
+
+  // External force arrow at B
+  const Fscale = 0.4;
+  const Fx = -Math.cos(Math.PI/3) * Fscale;
+  const Fy = -Math.sin(Math.PI/3) * Fscale;
+  const [Fend_x, Fend_y] = toC(Bx + Fx, By + Fy);
+  ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cBx, cBy); ctx.lineTo(Fend_x, Fend_y); ctx.stroke();
+  // Arrowhead
+  const ang = Math.atan2(Fend_y - cBy, Fend_x - cBx);
+  ctx.fillStyle = '#e67e22';
+  ctx.beginPath();
+  ctx.moveTo(Fend_x, Fend_y);
+  ctx.lineTo(Fend_x - 10*Math.cos(ang-0.4), Fend_y - 10*Math.sin(ang-0.4));
+  ctx.lineTo(Fend_x - 10*Math.cos(ang+0.4), Fend_y - 10*Math.sin(ang+0.4));
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#e67e22'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('100N / 60°', (cBx + Fend_x)/2 - 20, (cBy + Fend_y)/2 + 12);
+
+  // 1m scale bar
+  const scaleY = H - 20;
+  const s1m = sc * 1;
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(30, scaleY); ctx.lineTo(30 + s1m, scaleY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(30, scaleY-4); ctx.lineTo(30, scaleY+4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(30+s1m, scaleY-4); ctx.lineTo(30+s1m, scaleY+4); ctx.stroke();
+  ctx.fillStyle = '#333'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('1 m', 30 + s1m/2, scaleY - 7);
+
+  // Dispacement magnification note
+  ctx.fillStyle = '#888'; ctx.font = '9px sans-serif'; ctx.textAlign = 'right';
+  ctx.fillText(`位移放大 ×${dispScale.toExponential(0)}`, W - 5, scaleY);
+
+  // Labels A, C
+  ctx.fillStyle = '#333'; ctx.font = 'bold 12px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('A', cAx, cAy + 20);
+  ctx.fillText('C', cCx, cCy + 20);
+}
+
+draw();
+</script>
+</body>
+</html>

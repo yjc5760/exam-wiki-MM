@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>MM-2021-3 截面應力分布</title>
+<style>
+  body { font-family: "Noto Sans TC", sans-serif; background:#f8f8f8; margin:0; padding:12px; }
+  .container { max-width:580px; margin:0 auto; background:#fff; border-radius:8px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.12); }
+  h3 { font-size:15px; margin:0 0 4px 0; color:#333; text-align:center; }
+  .subtitle { font-size:11px; color:#666; text-align:center; margin-bottom:10px; }
+  .controls { display:flex; gap:10px; align-items:center; margin-bottom:10px; flex-wrap:wrap; justify-content:center; }
+  .btn { padding:5px 14px; border:1.5px solid #2980b9; border-radius:4px; cursor:pointer; font-size:12px; background:#fff; color:#2980b9; transition:all 0.2s; }
+  .btn.active { background:#2980b9; color:#fff; }
+  canvas { display:block; width:100%; }
+  .formula-box { background:#eef3ff; border-radius:6px; padding:10px 14px; font-size:12px; margin-top:10px; line-height:1.8; }
+  .formula-box b { color:#1a56db; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h3>MM-2021-3｜非均質梁截面應力分布</h3>
+  <p class="subtitle">E(y) = E₀(y/h)ⁿ，純彎矩 M₀，截面 b×2h</p>
+  <div class="controls">
+    <span style="font-size:12px;color:#555;">選擇 n：</span>
+    <button class="btn active" onclick="setN(0)">n = 0</button>
+    <button class="btn" onclick="setN(2)">n = 2</button>
+    <button class="btn" onclick="setN(4)">n = 4</button>
+    <button class="btn" onclick="setN(6)">n = 6</button>
+  </div>
+  <canvas id="c" height="360"></canvas>
+  <div class="formula-box" id="fbox">
+    <b>n = 0（均質梁）</b><br>
+    E(y) = E₀ （常數）<br>
+    σ(y) = (3M₀/2bh²) · (y/h)<br>
+    σ_max = <b>3M₀/(2bh²)</b> = M₀/Z，Z = 2bh²/3 ✓
+  </div>
+</div>
+<script>
+let currentN = 0;
+const canvas = document.getElementById('c');
+const dpr = window.devicePixelRatio || 1;
+const W = canvas.parentElement.offsetWidth - 32;
+const H = 360;
+canvas.style.width = W + 'px';
+canvas.style.height = H + 'px';
+canvas.width = W * dpr;
+canvas.height = H * dpr;
+const ctx = canvas.getContext('2d');
+ctx.scale(dpr, dpr);
+
+const formulas = {
+  0: `<b>n = 0（均質梁）</b><br>E(y) = E₀ （常數）<br>σ(y) = <b>3M₀/(2bh²)</b> · (y/h)  （線性）<br>σ_max = <b>3M₀/(2bh²)</b>  ← 還原標準公式 ✓`,
+  2: `<b>n = 2</b><br>E(y) = E₀(y/h)² （中性軸模數=0，頂底 E=E₀）<br>σ(y) = <b>5M₀/(2bh²)</b> · (y/h)³  （三次方曲線）<br>σ_max = <b>5M₀/(2bh²)</b>  = 1.67 × (n=0值)`,
+  4: `<b>n = 4</b><br>E(y) = E₀(y/h)⁴<br>σ(y) = <b>7M₀/(2bh²)</b> · (y/h)⁵  （五次方曲線）<br>σ_max = <b>7M₀/(2bh²)</b>  = 2.33 × (n=0值)`,
+  6: `<b>n = 6</b><br>E(y) = E₀(y/h)⁶<br>σ(y) = <b>9M₀/(2bh²)</b> · (y/h)⁷  （七次方曲線）<br>σ_max = <b>9M₀/(2bh²)</b>  = 3.00 × (n=0值)`
+};
+
+function setN(n) {
+  currentN = n;
+  document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.btn')[n/2].classList.add('active');
+  document.getElementById('fbox').innerHTML = formulas[n];
+  draw();
+}
+
+function draw() {
+  const n = currentN;
+  ctx.clearRect(0, 0, W, H);
+
+  // Layout: left = E(y) diagram, center = cross section, right = σ(y) diagram
+  const secW = 80, secH = 240;
+  const secX = W/2 - secW/2, secY = (H - secH)/2;
+  const plotW = (W/2 - secW/2 - 30);
+  const plotY0 = secY, plotH = secH;
+
+  // σ_max value (in units of M₀/(bh²))
+  const sigma_max = (n + 3) / 2;
+
+  // ---- Cross Section (center) ----
+  // Gradient fill for E(y): darker color = higher E
+  for (let py = 0; py <= secH; py++) {
+    const y = 1 - 2 * py / secH; // y/h from +1 to -1
+    const e = Math.pow(Math.abs(y), n); // E(y)/E₀
+    const alpha = 0.1 + 0.7 * e;
+    ctx.fillStyle = `rgba(41, 128, 185, ${alpha})`;
+    ctx.fillRect(secX, secY + py, secW, 1);
+  }
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(secX, secY, secW, secH);
+
+  // Center line (neutral axis)
+  ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 1; ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(secX - 10, secY + secH/2); ctx.lineTo(secX + secW + 10, secY + secH/2); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Labels on cross section
+  ctx.fillStyle = '#333'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('b', secX + secW/2, secY - 8);
+  ctx.fillText('截面', secX + secW/2, H - 10);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#333'; ctx.font = '10px sans-serif';
+  ctx.fillText('+h', secX - 5, secY + 10);
+  ctx.fillText('0', secX - 5, secY + secH/2 + 4);
+  ctx.fillText('-h', secX - 5, secY + secH - 2);
+
+  // y axis arrow on cross section
+  ctx.strokeStyle = '#666'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(secX - 12, secY + secH); ctx.lineTo(secX - 12, secY - 5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(secX - 16, secY + 4); ctx.lineTo(secX - 12, secY - 5); ctx.lineTo(secX - 8, secY + 4); ctx.stroke();
+  ctx.fillStyle = '#666'; ctx.font = 'italic 10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('y', secX - 12, secY - 10);
+
+  // ---- Left: E(y) diagram ----
+  const EplotX = 20, EplotW = secX - EplotX - 20;
+  ctx.fillStyle = '#f5f0ff';
+  ctx.fillRect(EplotX, plotY0, EplotW, plotH);
+  ctx.strokeStyle = '#bbb'; ctx.lineWidth = 0.5;
+  ctx.strokeRect(EplotX, plotY0, EplotW, plotH);
+
+  ctx.fillStyle = '#7d3c98'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('E(y)/E₀', EplotX + EplotW/2, plotY0 - 8);
+
+  // E curve
+  ctx.strokeStyle = '#7d3c98'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let py = 0; py <= plotH; py++) {
+    const y = 1 - 2 * py / plotH; // y/h from +1 to -1
+    const e = Math.pow(Math.abs(y), n);
+    const px = EplotX + e * EplotW;
+    if (py === 0) ctx.moveTo(px, plotY0 + py);
+    else ctx.lineTo(px, plotY0 + py);
+  }
+  ctx.stroke();
+
+  // E axis labels
+  ctx.fillStyle = '#555'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('0', EplotX + 2, plotY0 + plotH/2 + 4);
+  ctx.fillText('E₀', EplotX + EplotW, plotY0 + 10);
+  ctx.fillText('E₀', EplotX + EplotW, plotY0 + plotH - 2);
+
+  // Vertical axis line
+  ctx.strokeStyle = '#aaa'; ctx.lineWidth = 0.8; ctx.setLineDash([3,2]);
+  ctx.beginPath(); ctx.moveTo(EplotX, plotY0); ctx.lineTo(EplotX, plotY0 + plotH); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ---- Right: σ(y) diagram ----
+  const splotX = secX + secW + 20;
+  const splotW = W - splotX - 15;
+  ctx.fillStyle = '#fff8ee';
+  ctx.fillRect(splotX, plotY0, splotW, plotH);
+  ctx.strokeStyle = '#bbb'; ctx.lineWidth = 0.5;
+  ctx.strokeRect(splotX, plotY0, splotW, plotH);
+
+  ctx.fillStyle = '#c0392b'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('σ(y)', splotX + splotW/2, plotY0 - 8);
+
+  // zero line
+  const zeroSX = splotX + splotW/2;
+  ctx.strokeStyle = '#bbb'; ctx.lineWidth = 0.8; ctx.setLineDash([3,2]);
+  ctx.beginPath(); ctx.moveTo(zeroSX, plotY0); ctx.lineTo(zeroSX, plotY0 + plotH); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // σ curve
+  ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let py = 0; py <= plotH; py++) {
+    const y = 1 - 2 * py / plotH; // y/h from +1 to -1
+    const sigma = Math.pow(y, n + 1); // σ in units of (n+3)M₀/(2bh²) · 1 = normalized
+    const px = zeroSX + sigma * (splotW * 0.44);
+    if (py === 0) ctx.moveTo(px, plotY0 + py);
+    else ctx.lineTo(px, plotY0 + py);
+  }
+  ctx.stroke();
+
+  // σ max labels
+  ctx.fillStyle = '#c0392b'; ctx.font = '9px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText(`+${sigma_max.toFixed(1)}M₀/(bh²)`, zeroSX + splotW*0.44 + 2, plotY0 + 10);
+  ctx.textAlign = 'right';
+  ctx.fillText(`-${sigma_max.toFixed(1)}M₀/(bh²)`, zeroSX - splotW*0.44 - 2, plotY0 + plotH - 2);
+
+  // σ max dashed lines
+  ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 1; ctx.setLineDash([3,2]);
+  ctx.beginPath(); ctx.moveTo(zeroSX + splotW*0.44, plotY0); ctx.lineTo(zeroSX + splotW*0.44, plotY0 + plotH); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(zeroSX - splotW*0.44, plotY0); ctx.lineTo(zeroSX - splotW*0.44, plotY0 + plotH); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // n label
+  ctx.fillStyle = '#1a56db'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(`n = ${n}`, W/2, H - 8);
+
+  // Axis label
+  ctx.fillStyle = '#888'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('(壓)', splotX + 6, plotY0 + plotH/2 - 4);
+  ctx.fillText('(拉)', splotX + splotW - 6, plotY0 + plotH/2 - 4);
+}
+
+draw();
+</script>
+</body>
+</html>

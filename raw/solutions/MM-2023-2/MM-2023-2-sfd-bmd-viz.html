@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>MM-2023-2 剪力流分布示意圖</title>
+<style>
+  body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; margin: 0; padding: 16px; }
+  h2 { color: #a0c4ff; text-align: center; font-size: 15px; margin: 0 0 8px; }
+  .subtitle { text-align: center; font-size: 12px; color: #aaa; margin-bottom: 14px; }
+  .container { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; }
+  .panel { background: #16213e; border-radius: 10px; padding: 14px; width: 260px; }
+  .panel h3 { color: #ffd166; font-size: 13px; margin: 0 0 10px; text-align: center; }
+  canvas { display: block; margin: 0 auto; }
+  .info { font-size: 11px; color: #ccc; margin-top: 8px; line-height: 1.6; }
+  .formula { background: #0d3b66; border-radius: 6px; padding: 8px 10px; font-size: 11.5px;
+             color: #a8d8ff; margin-top: 8px; font-family: 'Courier New', monospace; line-height: 1.7; }
+  .highlight { color: #ff9f1c; font-weight: bold; }
+  .compare { background: #16213e; border-radius: 10px; padding: 14px; width: 540px; margin-top: 8px; }
+  .compare h3 { color: #ffd166; font-size: 13px; margin: 0 0 10px; text-align: center; }
+  table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  th { background: #0d3b66; color: #a8d8ff; padding: 6px 8px; text-align: center; }
+  td { border-bottom: 1px solid #2a2a4a; padding: 6px 8px; text-align: center; color: #ccc; }
+  tr:hover td { background: #1a1a3e; }
+</style>
+</head>
+<body>
+<h2>MM-2023-2 箱型斷面剪力流分布（組合梁焊縫設計）</h2>
+<div class="subtitle">懸臂梁受端部集中載重 P | 薄壁近似 | 剪力流 q = VQ/I</div>
+
+<div class="container">
+
+  <!-- Panel (c): 上下焊接 -->
+  <div class="panel">
+    <h3>(c) 上下焊接 — 焊縫在左右腹板</h3>
+    <canvas id="canvasC" width="240" height="240"></canvas>
+    <div class="info">
+      焊縫位置：左右腹板水平中線（y = 0）<br>
+      脫離部分：上半個 C 型槽（腹板上半 + 翼板）
+    </div>
+    <div class="formula">
+      Q<sub>c</sub> = th²/8 + bth/2<br>
+      &nbsp;&nbsp;&nbsp; = th(h + 4b) / 8<br>
+      <span class="highlight">q<sub>c</sub> = 3P(h+4b) / [4h(h+6b)]</span>
+    </div>
+  </div>
+
+  <!-- Panel (d): 左右焊接 -->
+  <div class="panel">
+    <h3>(d) 左右焊接 — 焊縫在上下翼板</h3>
+    <canvas id="canvasD" width="240" height="240"></canvas>
+    <div class="info">
+      焊縫位置：頂部翼板中央（y ≈ +h/2）<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;底部翼板中央（y ≈ −h/2）<br>
+      脫離部分：整個頂部翼板（寬 2b）
+    </div>
+    <div class="formula">
+      Q<sub>d</sub> = (2b · t) · h/2 = bth<br>
+      <span class="highlight">q<sub>d</sub> = 6Pb / [h(h+6b)]</span>
+    </div>
+  </div>
+
+  <!-- 比較表 -->
+  <div class="compare">
+    <h3>兩種配置比較（令 h = αb，計算 q 比值）</h3>
+    <canvas id="canvasChart" width="510" height="160"></canvas>
+    <div class="formula" style="margin-top:10px;">
+      q<sub>c</sub> / q<sub>d</sub> = (h + 4b) / (8b)<br>
+      h = 4b 時比值 = 1（兩者相等）<br>
+      h > 4b → q<sub>c</sub> > q<sub>d</sub>（上下焊接焊縫剪力較大）<br>
+      h &lt; 4b → q<sub>c</sub> &lt; q<sub>d</sub>（左右焊接焊縫剪力較大）
+    </div>
+    <table style="margin-top:10px;">
+      <tr><th>h/b 比</th><th>Q<sub>c</sub>/(th²)</th><th>Q<sub>d</sub>/(th²)</th><th>q<sub>c</sub>/q<sub>d</sub></th><th>較大者</th></tr>
+      <tr><td>2</td><td>(2+4·1)/(8·1) = 0.75</td><td>1·2/(2·1) = 1.0</td><td>6/8 = 0.75</td><td>q<sub>d</sub></td></tr>
+      <tr><td>4</td><td>(4+4)/8 = 1.00</td><td>1.00</td><td>1.00</td><td>相等</td></tr>
+      <tr><td>6</td><td>(6+4)/8 = 1.25</td><td>1.00</td><td>1.25</td><td>q<sub>c</sub></td></tr>
+      <tr><td>8</td><td>(8+4)/8 = 1.50</td><td>1.00</td><td>1.50</td><td>q<sub>c</sub></td></tr>
+    </table>
+  </div>
+
+</div>
+
+<script>
+// =========================================================
+// Panel (c): 上下焊接斷面示意
+// =========================================================
+(function(){
+  const cv = document.getElementById('canvasC');
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0,0,W,H);
+
+  // 斷面尺寸（畫面比例）
+  const cx = W/2, cy = H/2;
+  const bw = 55, bh = 90, tw = 12; // box: width bw*2, height bh, thickness tw
+
+  function drawBox(ctx) {
+    ctx.strokeStyle = '#60a3d9';
+    ctx.lineWidth = tw;
+    // top plate
+    ctx.beginPath(); ctx.moveTo(cx-bw, cy-bh/2); ctx.lineTo(cx+bw, cy-bh/2); ctx.stroke();
+    // bottom plate
+    ctx.beginPath(); ctx.moveTo(cx-bw, cy+bh/2); ctx.lineTo(cx+bw, cy+bh/2); ctx.stroke();
+    // left web
+    ctx.beginPath(); ctx.moveTo(cx-bw+tw/2, cy-bh/2+tw/2); ctx.lineTo(cx-bw+tw/2, cy+bh/2-tw/2); ctx.stroke();
+    // right web
+    ctx.beginPath(); ctx.moveTo(cx+bw-tw/2, cy-bh/2+tw/2); ctx.lineTo(cx+bw-tw/2, cy+bh/2-tw/2); ctx.stroke();
+  }
+
+  drawBox(ctx);
+
+  // Weld lines: left and right webs at y = cy (horizontal mid)
+  ctx.setLineDash([4,3]);
+  ctx.strokeStyle = '#ff6b6b'; ctx.lineWidth = 2.5;
+  // left weld
+  ctx.beginPath(); ctx.moveTo(cx-bw-8, cy); ctx.lineTo(cx-bw+tw+8, cy); ctx.stroke();
+  // right weld
+  ctx.beginPath(); ctx.moveTo(cx+bw-tw-8, cy); ctx.lineTo(cx+bw+8, cy); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Hatch: upper half detached area (left side)
+  ctx.fillStyle = 'rgba(255,160,80,0.18)';
+  ctx.fillRect(cx-bw, cy-bh/2, tw, bh/2);     // left web upper half
+  ctx.fillRect(cx-bw, cy-bh/2, bw*2, tw);     // top plate
+
+  // Q arrows
+  ctx.strokeStyle = '#ff9f1c'; ctx.lineWidth = 2; ctx.fillStyle = '#ff9f1c';
+  // Arrow upward from left weld
+  ctx.beginPath(); ctx.moveTo(cx-bw+tw/2, cy-5); ctx.lineTo(cx-bw+tw/2, cy-30);
+  ctx.moveTo(cx-bw+tw/2, cy-30); ctx.lineTo(cx-bw+tw/2-5, cy-22); ctx.moveTo(cx-bw+tw/2, cy-30); ctx.lineTo(cx-bw+tw/2+5, cy-22);
+  ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = '#ff6b6b'; ctx.font = 'bold 11px Segoe UI';
+  ctx.fillText('焊縫', cx-bw-30, cy-5);
+  ctx.fillText('(左)', cx-bw-30, cy+10);
+  ctx.fillText('焊縫', cx+bw+5, cy-5);
+  ctx.fillText('(右)', cx+bw+5, cy+10);
+
+  ctx.fillStyle = '#ff9f1c'; ctx.font = '10px Segoe UI';
+  ctx.fillText('Qc', cx-bw-22, cy-35);
+  ctx.fillText('脫離部分', cx-bw+tw+3, cy-bh/2+20);
+
+  // Dimension labels
+  ctx.fillStyle = '#aaa'; ctx.font = '10px Segoe UI';
+  ctx.fillText('b', cx-bw/2, cy-bh/2-8);
+  ctx.fillText('b', cx+bw/2-6, cy-bh/2-8);
+  ctx.fillText('h', cx+bw+10, cy);
+  ctx.fillText('t', cx-bw-18, cy);
+
+  // Axis
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.setLineDash([2,3]);
+  ctx.beginPath(); ctx.moveTo(cx, cy-bh/2-5); ctx.lineTo(cx, cy+bh/2+5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx-bw-10, cy); ctx.lineTo(cx+bw+10, cy); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#888'; ctx.font = '9px Segoe UI';
+  ctx.fillText('z', cx+2, cy-bh/2-8);
+  ctx.fillText('y', cx+bw+12, cy-3);
+})();
+
+// =========================================================
+// Panel (d): 左右焊接斷面示意
+// =========================================================
+(function(){
+  const cv = document.getElementById('canvasD');
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0,0,W,H);
+
+  const cx = W/2, cy = H/2;
+  const bw = 55, bh = 90, tw = 12;
+
+  function drawBox(ctx) {
+    ctx.strokeStyle = '#60a3d9';
+    ctx.lineWidth = tw;
+    ctx.beginPath(); ctx.moveTo(cx-bw, cy-bh/2); ctx.lineTo(cx+bw, cy-bh/2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx-bw, cy+bh/2); ctx.lineTo(cx+bw, cy+bh/2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx-bw+tw/2, cy-bh/2+tw/2); ctx.lineTo(cx-bw+tw/2, cy+bh/2-tw/2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx+bw-tw/2, cy-bh/2+tw/2); ctx.lineTo(cx+bw-tw/2, cy+bh/2-tw/2); ctx.stroke();
+  }
+
+  drawBox(ctx);
+
+  // Weld lines: top and bottom flanges at x = cx (vertical mid)
+  ctx.setLineDash([4,3]);
+  ctx.strokeStyle = '#ff6b6b'; ctx.lineWidth = 2.5;
+  // top weld
+  ctx.beginPath(); ctx.moveTo(cx, cy-bh/2-8); ctx.lineTo(cx, cy-bh/2+tw+8); ctx.stroke();
+  // bottom weld
+  ctx.beginPath(); ctx.moveTo(cx, cy+bh/2-tw-8); ctx.lineTo(cx, cy+bh/2+8); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Hatch: top flange (both halves)
+  ctx.fillStyle = 'rgba(255,160,80,0.18)';
+  ctx.fillRect(cx-bw, cy-bh/2, bw*2, tw); // top plate
+
+  // Q arrow: upward from top flange
+  ctx.strokeStyle = '#ff9f1c'; ctx.lineWidth = 2; ctx.fillStyle = '#ff9f1c';
+  ctx.beginPath();
+  ctx.moveTo(cx+30, cy-bh/2-tw/2);
+  ctx.lineTo(cx+30, cy-bh/2-28);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx+30, cy-bh/2-28);
+  ctx.lineTo(cx+30-5, cy-bh/2-20);
+  ctx.moveTo(cx+30, cy-bh/2-28);
+  ctx.lineTo(cx+30+5, cy-bh/2-20);
+  ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = '#ff6b6b'; ctx.font = 'bold 11px Segoe UI';
+  ctx.fillText('焊縫(頂)', cx+2, cy-bh/2-10);
+  ctx.fillText('焊縫(底)', cx+2, cy+bh/2+14);
+
+  ctx.fillStyle = '#ff9f1c'; ctx.font = '10px Segoe UI';
+  ctx.fillText('Qd', cx+33, cy-bh/2-30);
+  ctx.fillText('脫離部分', cx-bw+5, cy-bh/2+20);
+  ctx.fillText('(頂翼板寬2b)', cx-bw+5, cy-bh/2+32);
+
+  ctx.fillStyle = '#aaa'; ctx.font = '10px Segoe UI';
+  ctx.fillText('b', cx-bw/2, cy-bh/2-8);
+  ctx.fillText('b', cx+bw/2-6, cy-bh/2-8);
+  ctx.fillText('h', cx+bw+10, cy);
+
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.setLineDash([2,3]);
+  ctx.beginPath(); ctx.moveTo(cx, cy-bh/2-5); ctx.lineTo(cx, cy+bh/2+5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx-bw-10, cy); ctx.lineTo(cx+bw+10, cy); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#888'; ctx.font = '9px Segoe UI';
+  ctx.fillText('z', cx+2, cy-bh/2-8);
+  ctx.fillText('y', cx+bw+12, cy-3);
+})();
+
+// =========================================================
+// Comparison Chart: qc vs qd as function of h/b
+// =========================================================
+(function(){
+  const cv = document.getElementById('canvasChart');
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0,0,W,H);
+
+  const margin = {left:50, right:20, top:20, bottom:30};
+  const pw = W - margin.left - margin.right;
+  const ph = H - margin.top - margin.bottom;
+
+  const hbMin = 1, hbMax = 10;
+  const qMax = 2.0;
+
+  function hbToX(hb) { return margin.left + (hb - hbMin)/(hbMax - hbMin) * pw; }
+  function qToY(q)   { return margin.top + ph - q/qMax * ph; }
+
+  // Grid
+  ctx.strokeStyle = '#2a2a4a'; ctx.lineWidth = 1;
+  for(let q = 0; q <= qMax; q += 0.5) {
+    ctx.beginPath(); ctx.moveTo(margin.left, qToY(q)); ctx.lineTo(margin.left+pw, qToY(q)); ctx.stroke();
+  }
+  for(let hb = 2; hb <= hbMax; hb += 2) {
+    ctx.beginPath(); ctx.moveTo(hbToX(hb), margin.top); ctx.lineTo(hbToX(hb), margin.top+ph); ctx.stroke();
+  }
+
+  // Axes
+  ctx.strokeStyle = '#666'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(margin.left, margin.top); ctx.lineTo(margin.left, margin.top+ph); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(margin.left, margin.top+ph); ctx.lineTo(margin.left+pw, margin.top+ph); ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = '#aaa'; ctx.font = '10px Segoe UI';
+  ctx.fillText('0', margin.left-12, margin.top+ph+4);
+  for(let hb = 2; hb <= hbMax; hb += 2) {
+    ctx.fillText(hb, hbToX(hb)-4, margin.top+ph+14);
+  }
+  for(let q = 0.5; q <= qMax; q += 0.5) {
+    ctx.fillText(q.toFixed(1), margin.left-28, qToY(q)+4);
+  }
+  ctx.fillStyle = '#ccc'; ctx.font = '11px Segoe UI';
+  ctx.fillText('h/b', margin.left+pw/2-10, margin.top+ph+26);
+  ctx.save(); ctx.translate(14, margin.top+ph/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('q / (P/h)', -30, 0); ctx.restore();
+
+  // Plot qc: q_c ∝ (h+4b)/[h(h+6b)] = (hb+4)/[hb(hb+6)] (normalized by 6Pb/[h(h+6b)])
+  // Let's plot normalized: q_c_norm = 3(hb+4)/[4(hb+6)] / [6/(hb+6)] ... simplify differently
+  // Actually plot q_c * h(h+6b)/P and q_d * h(h+6b)/P as dimensionless ratios
+  // q_c * h(h+6b)/P = 3(h+4b)/4 ... let α = h/b:
+  // q_c * α(α+6) b²/P = 3(α+4)/4  -- doesn't work cleanly
+  // Instead, just plot the ratio q_c/(P/b) and q_d/(P/b) as functions of h/b:
+  // q_c = 3P(h+4b)/[4h(h+6b)] → q_c·b/P = 3(α+4)/(4α(α+6)) where α=h/b
+  // q_d = 6Pb/[h(h+6b)] → q_d·b/P = 6/(α(α+6))
+
+  ctx.lineWidth = 2.5;
+  const steps = 200;
+  // qc curve
+  ctx.strokeStyle = '#ff9f1c';
+  ctx.beginPath();
+  for(let i = 0; i <= steps; i++) {
+    const hb = hbMin + i/steps*(hbMax-hbMin);
+    const q = 3*(hb+4)/(4*hb*(hb+6));
+    const x = hbToX(hb), y = qToY(q);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  // qd curve
+  ctx.strokeStyle = '#06d6a0';
+  ctx.beginPath();
+  for(let i = 0; i <= steps; i++) {
+    const hb = hbMin + i/steps*(hbMax-hbMin);
+    const q = 6/(hb*(hb+6));
+    const x = hbToX(hb), y = qToY(q);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  // Intersection at hb=4
+  const hbInt = 4;
+  const qInt = 3*(4+4)/(4*4*(4+6));
+  ctx.fillStyle = '#ff6b6b';
+  ctx.beginPath(); ctx.arc(hbToX(hbInt), qToY(qInt), 5, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ff6b6b'; ctx.font = '10px Segoe UI';
+  ctx.fillText('h/b=4 (相等點)', hbToX(4)+5, qToY(qInt)-5);
+
+  // Legend
+  ctx.fillStyle = '#ff9f1c'; ctx.fillRect(margin.left+pw-110, margin.top+5, 14, 3);
+  ctx.fillStyle = '#ff9f1c'; ctx.font = '10px Segoe UI'; ctx.fillText('q_c·b/P', margin.left+pw-93, margin.top+10);
+  ctx.fillStyle = '#06d6a0'; ctx.fillRect(margin.left+pw-110, margin.top+18, 14, 3);
+  ctx.fillStyle = '#06d6a0'; ctx.fillText('q_d·b/P', margin.left+pw-93, margin.top+23);
+})();
+</script>
+</body>
+</html>

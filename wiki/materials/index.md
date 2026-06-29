@@ -1,8 +1,7 @@
-# 材料行為層（RC）
+# wiki/materials/ — MM 材料行為
 
-| 頁面 | 內容 |
-|------|------|
-| [混凝土應力-應變](concrete-stress-strain.md) | 峰值應力、極限應變、Whitney 應力塊、圍束混凝土 |
-| [鋼筋降伏行為](steel-yielding.md) | SD280/420/550、彈塑性假設、高強度鋼筋 |
-| [潛變與收縮](creep-shrinkage.md) | 潛變係數、收縮應變、對預力損失與撓度的影響 |
-| [預力鋼絞線](prestress-strand.md) | 7 線絞線規格、雙線性模型、fps 計算公式、鬆弛 |
+| 材料/現象 | 頁面 | 對應考點 |
+|---------|------|---------|
+| 鋼材彈塑性（Elastic-Plastic Steel） | [[steel-elastic-plastic]] | MM-U1-2, MM-U4 |
+| 脆性材料 | [[brittle-material]] | MM-U1-3 |
+| 材料常數（E, G, ν） | [[material-constants]] | MM-U1-2 |

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>MM-2007-2 不規則斷面彎曲與中性軸互動示意圖</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
+    background: #0f172a;
+    color: #f8fafc;
+    margin: 0;
+    padding: 12px;
+    width: 580px;
+    box-sizing: border-box;
+  }
+  h2 {
+    color: #38bdf8;
+    text-align: center;
+    font-size: 16px;
+    margin: 0 0 10px;
+  }
+  .panel {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+  .panel-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #ffd166;
+    margin-bottom: 8px;
+    border-left: 3px solid #ff9f1c;
+    padding-left: 6px;
+  }
+  canvas {
+    display: block;
+    background: #0b0f19;
+    border-radius: 6px;
+    margin: 0 auto;
+    border: 1px solid #1e293b;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    margin: 8px 0;
+  }
+  .row span {
+    white-space: nowrap;
+  }
+  input[type=range] {
+    flex: 1;
+    accent-color: #38bdf8;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    margin-top: 8px;
+    background: #0f172a;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  th, td {
+    border: 1px solid #334155;
+    padding: 6px 8px;
+    text-align: center;
+  }
+  th {
+    background: #1e293b;
+    color: #38bdf8;
+    font-weight: 600;
+  }
+  td {
+    color: #cbd5e1;
+  }
+  .note {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+  .highlight {
+    color: #ff9f1c;
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+<h2>MM-2007-2　不規則斷面：形心・彎矩向量・中性軸偏轉角</h2>
+<div class="panel">
+  <div class="panel-title">斷面形心與旋轉軸互動</div>
+  <canvas id="cv" width="556" height="340"></canvas>
+  <div class="row">
+    <span>彎矩向量角 θ：</span>
+    <input type="range" id="thetaSlider" min="0" max="360" value="180" step="1">
+    <span id="thetaVal" style="width: 48px; color: #ff6b6b; font-weight: bold;">180°</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>彎矩角 θ</th>
+        <th>中性軸角 φ</th>
+        <th>M₁分量</th>
+        <th>M₂分量</th>
+        <th>A點應力 σ_A (MPa)</th>
+        <th>極限彎矩 M_max</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td id="tdTheta">180°</td>
+        <td id="tdPhi" class="highlight">-36.87°</td>
+        <td id="tdM1">-M</td>
+        <td id="tdM2">0</td>
+        <td id="tdSigma">-11.87 MPa</td>
+        <td id="tdMmax" class="highlight">16.85 kN·m</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="note">
+    <strong>常數性質：</strong> A = 216 cm²｜I₁ = 7776 cm⁴｜I₂ = 2592 cm⁴｜I₁₂ = −1944 cm⁴。<br>
+    <strong>本題基準點 (θ = 180°)：</strong> 彎矩指向左，中性軸夾角 φ = −36.87° (水平下方)，M_max = 16.85 kN·m。<br>
+    拖曳上方滑桿改變彎矩角度，觀察中性軸 φ 如何隨 $\tan\phi = \frac{12\sin\theta - 3\cos\theta}{4\cos\theta - 3\sin\theta}$ 進行偏轉，以及 A 點應力的變化。
+  </div>
+</div>
+
+<script>
+(function() {
+  const I1 = 7776, I2 = 2592, I12 = -1944;
+  const Ax = -6, Ay = 12; // A點座標 (-6, 12)
+  const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  const sc = 10, ox = 278, oy = 170; // 中心原點 C
+  
+  function X(x) { return ox + x * sc; }
+  function Y(y) { return oy - y * sc; }
+
+  // 繪製箭頭
+  function arrow(x1, y1, x2, y2, color, isDouble) {
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    const a = Math.atan2(y2 - y1, x2 - x1);
+    const arrowLen = 6;
+    
+    // 箭頭1
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - arrowLen * Math.cos(a - 0.4), y2 - arrowLen * Math.sin(a - 0.4));
+    ctx.lineTo(x2 - arrowLen * Math.cos(a + 0.4), y2 - arrowLen * Math.sin(a + 0.4));
+    ctx.closePath();
+    ctx.fill();
+
+    // 雙箭頭 (代表力矩)
+    if (isDouble) {
+      const x2_offset = x2 - 8 * Math.cos(a);
+      const y2_offset = y2 - 8 * Math.sin(a);
+      ctx.beginPath();
+      ctx.moveTo(x2_offset, y2_offset);
+      ctx.lineTo(x2_offset - arrowLen * Math.cos(a - 0.4), y2_offset - arrowLen * Math.sin(a - 0.4));
+      ctx.lineTo(x2_offset - arrowLen * Math.cos(a + 0.4), y2_offset - arrowLen * Math.sin(a + 0.4));
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  function draw(theta) {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+
+    // 1. 繪製 Z-section 斷面
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    // 左上與右上段落
+    ctx.moveTo(X(-6), Y(12));
+    ctx.lineTo(X(0), Y(12));
+    ctx.lineTo(X(0), Y(6));
+    ctx.lineTo(X(6), Y(6));
+    // 右下與左下段落
+    ctx.lineTo(X(6), Y(-12));
+    ctx.lineTo(X(0), Y(-12));
+    ctx.lineTo(X(0), Y(-6));
+    ctx.lineTo(X(-6), Y(-6));
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // 2. 劃分網格或虛線標註各單元邊界
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(X(-6), Y(0)); ctx.lineTo(X(6), Y(0));
+    ctx.moveTo(X(0), Y(12)); ctx.lineTo(X(0), Y(-12));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 3. 繪製 1-2 參考座標軸
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 1;
+    arrow(X(-10), Y(0), X(11), Y(0), '#64748b', false);
+    arrow(X(0), Y(-15), X(0), Y(15), '#64748b', false);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px Segoe UI';
+    ctx.fillText('1 (y)', X(11.2), Y(0) + 4);
+    ctx.fillText('2 (z)', X(0) - 15, Y(15) - 4);
+
+    // 4. 標註形心 C
+    ctx.fillStyle = '#06d6a0';
+    ctx.beginPath();
+    ctx.arc(X(0), Y(0), 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillText('C (形心)', X(0) + 6, Y(0) - 6);
+
+    // 5. 標註 A 點
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(X(Ax), Y(Ay), 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.font = 'bold 11px Segoe UI';
+    ctx.fillText('A (-6, 12) cm', X(Ax) - 78, Y(Ay) - 6);
+
+    // 6. 計算中性軸偏轉角與繪製
+    const thetaRad = theta * Math.PI / 180;
+    const sinT = Math.sin(thetaRad);
+    const cosT = Math.cos(thetaRad);
+    
+    // tan(phi) = (12*sinT - 3*cosT) / (4*cosT - 3*sinT)
+    const num = 12 * sinT - 3 * cosT;
+    const den = 4 * cosT - 3 * sinT;
+    let phi = 0;
+    if (Math.abs(den) < 1e-6) {
+      phi = num > 0 ? Math.PI / 2 : -Math.PI / 2;
+    } else {
+      phi = Math.atan(num / den);
+    }
+    
+    // 繪製中性軸 (綠線)
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    const len = 14;
+    ctx.moveTo(X(-len * Math.cos(phi)), Y(-len * Math.sin(phi)));
+    ctx.lineTo(X(len * Math.cos(phi)), Y(len * Math.sin(phi)));
+    ctx.stroke();
+    
+    // 標註中性軸文字
+    ctx.fillStyle = '#10b981';
+    ctx.font = 'bold 11px Segoe UI';
+    ctx.fillText('中性軸 (N.A.)', X(len * Math.cos(phi)) - 30, Y(len * Math.sin(phi)) - 8);
+
+    // 7. 繪製彎矩向量 (雙頭紅箭頭)
+    const momentLen = 7.5;
+    arrow(X(0), Y(0), X(momentLen * Math.cos(thetaRad)), Y(momentLen * Math.sin(thetaRad)), '#ef4444', true);
+    ctx.fillStyle = '#ef4444';
+    ctx.font = 'bold 12px Segoe UI';
+    ctx.fillText('M', X(momentLen * Math.cos(thetaRad)) + 8 * Math.cos(thetaRad - 0.2), Y(momentLen * Math.sin(thetaRad)) - 8 * Math.sin(thetaRad - 0.2));
+
+    // 8. 顯示角度數值標註
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '11px Segoe UI';
+    ctx.fillText(`M 向量角度 θ = ${theta}°`, 12, 24);
+    ctx.fillText(`中性軸偏角 φ = ${(phi * 180 / Math.PI).toFixed(2)}°`, 12, 40);
+  }
+
+  function update() {
+    const theta = parseInt(document.getElementById('thetaSlider').value);
+    document.getElementById('thetaVal').textContent = theta + '°';
+    document.getElementById('tdTheta').textContent = theta + '°';
+
+    const thetaRad = theta * Math.PI / 180;
+    const sinT = Math.sin(thetaRad);
+    const cosT = Math.cos(thetaRad);
+
+    // 計算中性軸角度
+    const num = 12 * sinT - 3 * cosT;
+    const den = 4 * cosT - 3 * sinT;
+    let phiDeg = 0;
+    if (Math.abs(den) < 1e-6) {
+      phiDeg = num > 0 ? 90 : -90;
+    } else {
+      phiDeg = Math.atan(num / den) * 180 / Math.PI;
+    }
+    document.getElementById('tdPhi').textContent = phiDeg.toFixed(2) + '°';
+
+    // 彎矩分量文字
+    let m1Str = cosT.toFixed(3) + ' M';
+    let m2Str = sinT.toFixed(3) + ' M';
+    if (Math.abs(cosT) < 1e-3) m1Str = '0';
+    if (Math.abs(sinT) < 1e-3) m2Str = '0';
+    if (theta === 180) { m1Str = '-M'; m2Str = '0'; }
+    document.getElementById('tdM1').textContent = m1Str;
+    document.getElementById('tdM2').textContent = m2Str;
+
+    // 計算 A 點正向應力 (設定基準 M = 10 kN·m = 10000 N·m)
+    // σ_A = M * (6*sinT + 5*cosT) / 4212 (其中 M 換算後帶入，得到 MPa)
+    const baseM = 10000; // 10 kN·m
+    const sigmaA = (baseM * (6 * sinT + 5 * cosT)) / 4212; // MPa
+    document.getElementById('tdSigma').textContent = sigmaA.toFixed(2) + ' MPa';
+
+    // 計算極限彎矩 (容許應力 20 MPa)
+    // M_max = 20 * 4212 / |6*sinT + 5*cosT| in N·m
+    const factor = Math.abs(6 * sinT + 5 * cosT);
+    let mMaxStr = '';
+    if (factor < 1e-5) {
+      mMaxStr = '無窮大';
+    } else {
+      const mMax = (20 * 4212) / factor; // N·m
+      mMaxStr = (mMax / 1000).toFixed(2) + ' kN·m';
+    }
+    document.getElementById('tdMmax').textContent = mMaxStr;
+
+    draw(theta);
+  }
+
+  document.getElementById('thetaSlider').addEventListener('input', update);
+  update();
+})();
+</script>
+</body>
+</html>

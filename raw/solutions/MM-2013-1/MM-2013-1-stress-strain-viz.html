@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>MM-2013-1 纜線AD應力應變曲線 + 加載/卸載路徑</title>
+<style>
+  body { margin: 0; background: #1a1a2e; color: #eee; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+  h2 { color: #a8d8ea; font-size: 1.1em; margin-bottom: 4px; }
+  .subtitle { color: #888; font-size: 0.85em; margin-bottom: 16px; }
+  canvas { background: #16213e; border-radius: 8px; border: 1px solid #334; }
+  .legend { display: flex; gap: 20px; margin-top: 12px; font-size: 0.85em; }
+  .leg-item { display: flex; align-items: center; gap: 6px; }
+  .leg-color { width: 28px; height: 3px; border-radius: 2px; }
+  .result-box { margin-top: 14px; background: #0f3460; border-radius: 8px; padding: 12px 20px; font-size: 0.88em; line-height: 1.8; }
+  .result-box span { color: #f6ae2d; font-weight: bold; }
+</style>
+</head>
+<body>
+<h2>MM-2013-1　纜線 AD — σ-ε 曲線、加載路徑與彈性卸載</h2>
+<div class="subtitle">σ(ε) = 124000ε / (1 + 240ε)　[σ in MPa, 0 ≤ ε ≤ 0.03]</div>
+<canvas id="c" width="700" height="420"></canvas>
+<div class="legend">
+  <div class="leg-item"><div class="leg-color" style="background:#4fc3f7"></div>σ-ε 曲線（非線性材料）</div>
+  <div class="leg-item"><div class="leg-color" style="background:#ef9a9a;height:2px;border-top:2px dashed #ef9a9a"></div>σy = 255 MPa（降伏線）</div>
+  <div class="leg-item"><div class="leg-color" style="background:#f6ae2d"></div>加載路徑（→ 最大應力點）</div>
+  <div class="leg-item"><div class="leg-color" style="background:#81c784"></div>彈性卸載（斜率 E）</div>
+</div>
+<div class="result-box">
+  彈性係數：<span>E = 124,000 MPa = 124 GPa</span>　|
+  加載至：<span>σmax = 357.1 MPa</span>，<span>εmax = 9.33 × 10⁻³</span><br>
+  彈性回彈：<span>Δε = 2.88 × 10⁻³</span>　|
+  永久應變：<span>εperm = 6.45 × 10⁻³</span>　|
+  永久變形：<span>δperm = 12.90 mm</span>
+</div>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+// Plot area
+const pl = 70, pr = 30, pt = 30, pb = 50;
+const pw = W - pl - pr, ph = H - pt - pb;
+
+// Data ranges
+const eMax = 0.033, sMax = 500;
+
+function toX(e) { return pl + (e / eMax) * pw; }
+function toY(s) { return pt + ph - (s / sMax) * ph; }
+
+// σ(ε) function
+function sigma(e) { return 124000 * e / (1 + 240 * e); }
+
+// Draw grid
+ctx.strokeStyle = '#1e3a5f';
+ctx.lineWidth = 1;
+for (let i = 0; i <= 5; i++) {
+  const e = i * 0.006;
+  ctx.beginPath(); ctx.moveTo(toX(e), pt); ctx.lineTo(toX(e), pt + ph); ctx.stroke();
+  ctx.fillStyle = '#666'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(e.toFixed(3), toX(e), pt + ph + 16);
+}
+for (let i = 0; i <= 5; i++) {
+  const s = i * 100;
+  ctx.beginPath(); ctx.moveTo(pl, toY(s)); ctx.lineTo(pl + pw, toY(s)); ctx.stroke();
+  ctx.fillStyle = '#666'; ctx.textAlign = 'right';
+  ctx.fillText(s, pl - 6, toY(s) + 4);
+}
+
+// Axes
+ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1.5;
+ctx.beginPath(); ctx.moveTo(pl, pt); ctx.lineTo(pl, pt + ph + 5); ctx.stroke();
+ctx.beginPath(); ctx.moveTo(pl - 5, pt + ph); ctx.lineTo(pl + pw, pt + ph); ctx.stroke();
+
+// Axis labels
+ctx.fillStyle = '#ccc'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
+ctx.fillText('ε', pl + pw / 2, pt + ph + 36);
+ctx.save(); ctx.translate(16, pt + ph / 2); ctx.rotate(-Math.PI / 2);
+ctx.fillText('σ (MPa)', 0, 0); ctx.restore();
+
+// σ-ε curve
+ctx.beginPath(); ctx.strokeStyle = '#4fc3f7'; ctx.lineWidth = 2.5;
+for (let i = 0; i <= 200; i++) {
+  const e = i * 0.03 / 200;
+  const s = sigma(e);
+  i === 0 ? ctx.moveTo(toX(e), toY(s)) : ctx.lineTo(toX(e), toY(s));
+}
+ctx.stroke();
+
+// Yield line
+ctx.beginPath(); ctx.strokeStyle = '#ef9a9a'; ctx.lineWidth = 1.5;
+ctx.setLineDash([6, 4]);
+ctx.moveTo(pl, toY(255)); ctx.lineTo(pl + pw, toY(255));
+ctx.stroke(); ctx.setLineDash([]);
+ctx.fillStyle = '#ef9a9a'; ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
+ctx.fillText('σy = 255', pl + pw - 68, toY(255) - 5);
+
+// Key points
+const eMax_load = 25 / 2680; // ≈ 0.009328
+const sMax_load = sigma(eMax_load); // = 357.14 MPa
+const eY = 255 / 38286 * (124000/38286);  // simpler:
+// from 255 = 124000e/(1+240e) → 255 + 61200e = 124000e → 255 = 62800e → e = 255/62800
+const eY_val = 255 / 62800; // ≈ 0.00406
+const ePerm = eMax_load - sMax_load / 124000; // ≈ 0.006448
+
+// Loading path: origin to (eMax_load, sMax_load) - follows curve
+// Just mark the endpoint with a dot
+ctx.fillStyle = '#f6ae2d';
+ctx.beginPath(); ctx.arc(toX(eMax_load), toY(sMax_load), 6, 0, 2 * Math.PI); ctx.fill();
+ctx.fillStyle = '#f6ae2d'; ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
+ctx.fillText('加載點 (ε=9.33×10⁻³, σ=357.1 MPa)', toX(eMax_load) + 8, toY(sMax_load) - 5);
+
+// Elastic unloading line: from (eMax_load, sMax_load) to (ePerm, 0)
+ctx.beginPath(); ctx.strokeStyle = '#81c784'; ctx.lineWidth = 2.5;
+ctx.moveTo(toX(eMax_load), toY(sMax_load));
+ctx.lineTo(toX(ePerm), toY(0));
+ctx.stroke();
+
+// Mark permanent strain point
+ctx.fillStyle = '#81c784';
+ctx.beginPath(); ctx.arc(toX(ePerm), toY(0), 5, 0, 2 * Math.PI); ctx.fill();
+ctx.fillStyle = '#81c784'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+ctx.fillText('εperm ≈ 6.45×10⁻³', toX(ePerm), toY(0) + 28);
+
+// Mark yield point on curve
+ctx.fillStyle = '#ef9a9a';
+ctx.beginPath(); ctx.arc(toX(eY_val), toY(255), 4, 0, 2 * Math.PI); ctx.fill();
+
+// Mark 454 MPa at ε=0.03
+ctx.fillStyle = '#4fc3f7'; ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
+ctx.fillText('454 MPa (ε=0.03)', toX(0.03) - 4, toY(454) - 6);
+ctx.fillStyle = '#4fc3f7';
+ctx.beginPath(); ctx.arc(toX(0.03), toY(sigma(0.03)), 4, 0, 2 * Math.PI); ctx.fill();
+
+// Draw Δε_el bracket
+const x1 = toX(ePerm), x2 = toX(eMax_load), yBrk = toY(0) + 8;
+ctx.beginPath(); ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1;
+ctx.moveTo(x1, yBrk); ctx.lineTo(x1, yBrk + 5);
+ctx.moveTo(x2, yBrk); ctx.lineTo(x2, yBrk + 5);
+ctx.moveTo(x1, yBrk + 5); ctx.lineTo(x2, yBrk + 5);
+ctx.stroke();
+ctx.fillStyle = '#aaa'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+ctx.fillText('Δε_el = 2.88×10⁻³', (x1 + x2) / 2, yBrk + 18);
+
+// Title annotation
+ctx.fillStyle = '#a8d8ea'; ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
+ctx.fillText('初始斜率 E = 124,000 MPa = 124 GPa', pl + pw, pt + 20);
+</script>
+</body>
+</html>

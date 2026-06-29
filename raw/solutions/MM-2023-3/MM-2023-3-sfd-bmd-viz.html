@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>MM-2023-3 工字梁應力分布</title>
+<style>
+  body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; margin: 0; padding: 16px; }
+  h2 { color: #a0c4ff; text-align: center; font-size: 15px; margin: 0 0 6px; }
+  .subtitle { text-align: center; font-size: 11.5px; color: #aaa; margin-bottom: 14px; }
+  .container { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+  .panel { background: #16213e; border-radius: 10px; padding: 14px; }
+  .panel h3 { color: #ffd166; font-size: 13px; margin: 0 0 8px; text-align: center; }
+  canvas { display: block; margin: 0 auto; }
+  .formula { background: #0d3b66; border-radius: 6px; padding: 8px 10px; font-size: 11.5px;
+             color: #a8d8ff; margin-top: 8px; font-family: 'Courier New', monospace; line-height: 1.75; }
+  .highlight { color: #ff9f1c; font-weight: bold; }
+  .red { color: #ff6b6b; }
+  .green { color: #06d6a0; }
+</style>
+</head>
+<body>
+<h2>MM-2023-3 工字型梁應力分析</h2>
+<div class="subtitle">斷面：翼板 3b×t，腹板 b×h | 簡支梁跨距 L，跨中集中載重 P</div>
+
+<div class="container">
+
+  <!-- 斷面幾何與應力分布 -->
+  <div class="panel">
+    <h3>斷面幾何與剪應力 / 彎曲應力分布</h3>
+    <canvas id="cvSection" width="560" height="300"></canvas>
+    <div class="formula">
+      I = bh³/12 + 3bt(h+t)²/2<br>
+      <span class="highlight">σ_max = M_max·(h/2+t) / I，發生在翼板外緣（M_max = PL/4）</span><br>
+      <span class="red">τ₁（腹板頂）= 3Pt(h+t)/(4I)，比翼板頂大 3 倍</span><br>
+      <span class="green">τ_max（中性軸）= P/(2I)·[3t(h+t)/2 + h²/8]</span>
+    </div>
+  </div>
+
+  <!-- 剪力圖 + 彎矩圖 -->
+  <div class="panel">
+    <h3>剪力圖（V）與彎矩圖（M）</h3>
+    <canvas id="cvDiagram" width="560" height="220"></canvas>
+    <div class="formula">
+      V_max = P/2（支承端）→ 控制剪應力計算<br>
+      M_max = PL/4（跨中）→ 控制彎曲應力計算<br>
+      <span class="highlight">⚠ 剪應力與彎曲應力的峰值截面不同！</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ========================
+// 斷面幾何與應力分布
+// ========================
+(function(){
+  const cv = document.getElementById('cvSection');
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0,0,W,H);
+
+  // 斷面繪製參數
+  const cx = 120, cy = H/2;
+  const bw = 10, bh = 80, tw = 30, tt = 12; // 腹板寬bw，高bh，翼板半寬(3b/2=)，翼板厚tt
+  // 實際：翼板總寬 3b = 3*bw = 30 畫面單位，但我們讓翼板寬=tw*2=60
+
+  // 斷面外框
+  ctx.fillStyle = '#1e3a5f';
+  // 上翼板
+  ctx.fillRect(cx - tw, cy - bh/2 - tt, tw*2, tt);
+  // 下翼板
+  ctx.fillRect(cx - tw, cy + bh/2, tw*2, tt);
+  // 腹板
+  ctx.fillRect(cx - bw/2, cy - bh/2, bw, bh);
+
+  ctx.strokeStyle = '#60a3d9'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(cx - tw, cy - bh/2 - tt, tw*2, tt);
+  ctx.strokeRect(cx - tw, cy + bh/2, tw*2, tt);
+  ctx.strokeRect(cx - bw/2, cy - bh/2, bw, bh);
+
+  // Neutral axis
+  ctx.setLineDash([4,3]); ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(cx-tw-10, cy); ctx.lineTo(cx+tw+20, cy); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Dimension labels
+  ctx.fillStyle = '#aaa'; ctx.font = '10px Segoe UI';
+  ctx.fillText('3b', cx-6, cy - bh/2 - tt - 6);
+  ctx.fillText('b', cx+2, cy+5);
+  ctx.fillText('t', cx+tw+3, cy - bh/2 - tt/2 + 3);
+  ctx.fillText('t', cx+tw+3, cy + bh/2 + tt/2 + 3);
+  ctx.fillText('h', cx+tw+5, cy);
+
+  // Arrows for h
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(cx+tw+14, cy-bh/2); ctx.lineTo(cx+tw+14, cy+bh/2); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx+tw+14, cy-bh/2); ctx.lineTo(cx+tw+11, cy-bh/2+7); ctx.moveTo(cx+tw+14, cy-bh/2); ctx.lineTo(cx+tw+17, cy-bh/2+7);
+  ctx.moveTo(cx+tw+14, cy+bh/2); ctx.lineTo(cx+tw+11, cy+bh/2-7); ctx.moveTo(cx+tw+14, cy+bh/2); ctx.lineTo(cx+tw+17, cy+bh/2-7);
+  ctx.stroke();
+
+  ctx.fillStyle = '#aaa'; ctx.font = '9px Segoe UI';
+  ctx.fillText('NA', cx+tw+18, cy+4);
+
+  // ========== 彎曲應力分布（右側）==========
+  const sx = cx + tw + 60; // 應力分布起點 x
+  const maxSigW = 80; // 最大應力分布寬度（畫面單位）
+  const topY = cy - bh/2 - tt;
+  const botY = cy + bh/2 + tt;
+  const totalH = botY - topY;
+
+  // 線性彎曲應力（壓在上，拉在下）
+  ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 2;
+  ctx.fillStyle = 'rgba(255,209,102,0.12)';
+  ctx.beginPath();
+  ctx.moveTo(sx, topY);
+  ctx.lineTo(sx - maxSigW, topY); // 上翼板外緣（最大壓）
+  ctx.lineTo(sx, cy);             // 中性軸（0）
+  ctx.lineTo(sx + maxSigW, botY); // 下翼板外緣（最大拉）
+  ctx.lineTo(sx, botY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(sx - maxSigW, topY);
+  ctx.lineTo(sx, cy);
+  ctx.lineTo(sx + maxSigW, botY);
+  ctx.stroke();
+
+  ctx.fillStyle = '#ffd166'; ctx.font = 'bold 10px Segoe UI';
+  ctx.fillText('σ分布', sx-15, topY-8);
+  ctx.fillStyle = '#ffd166'; ctx.font = '9px Segoe UI';
+  ctx.fillText('-σmax', sx - maxSigW - 36, topY + 5);
+  ctx.fillText('+σmax', sx + maxSigW + 3, botY + 4);
+  ctx.fillText('0', sx + 3, cy + 4);
+
+  // ========== 剪應力分布（更右側）==========
+  const tx = sx + 160;
+  // 剪應力分布（非線性，工字型特有的「梯形+矩形」分布）
+  // 翼板外緣 = 0，翼板-腹板交接 = τ1(小)，腹板頂 = τ1(大，3倍)，中性軸 = τmax
+  const tau1_f = 18;   // 翼板切面剪應力（小，往右正）
+  const tau1_w = tau1_f * 3; // 腹板切面突增（=3倍）
+  const tauMax = tau1_w + 25; // 中性軸最大
+
+  function tauAt(y_frac) {
+    // y_frac: -1(底翼板外緣) to +1(頂翼板外緣)
+    const absY = Math.abs(y_frac);
+    if (absY > bh/2/(bh/2+tt)) {
+      // 在翼板範圍，線性從外緣0到翼板-腹板交接 tau1_f
+      const frac = (1 - absY) / (tt/(bh/2+tt));
+      return tau1_f * frac;
+    } else {
+      // 在腹板範圍，拋物線從腹板頂 tau1_w 到中性軸 tauMax
+      const frac_web = absY / (bh/2/(bh/2+tt));
+      return tauMax - (tauMax - tau1_w) * (1 - frac_web*frac_web);
+    }
+  }
+
+  // 繪製剪應力分布（僅向右顯示，因為對稱，取正值）
+  ctx.fillStyle = 'rgba(6,214,160,0.15)';
+  ctx.strokeStyle = '#06d6a0'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(tx, topY);
+  const steps = 60;
+  for(let i = 0; i <= steps; i++) {
+    const y = topY + i/steps * totalH;
+    const yFrac = 1 - 2*(y - topY)/totalH;
+    const tau = tauAt(yFrac);
+    ctx.lineTo(tx + tau, y);
+  }
+  ctx.lineTo(tx, botY);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(tx, topY);
+  for(let i = 0; i <= steps; i++) {
+    const y = topY + i/steps * totalH;
+    const yFrac = 1 - 2*(y - topY)/totalH;
+    const tau = tauAt(yFrac);
+    ctx.lineTo(tx + tau, y);
+  }
+  ctx.lineTo(tx, botY);
+  ctx.stroke();
+
+  // 突變線標記（腹板-翼板交接）
+  const yFlange = cy - bh/2;
+  ctx.strokeStyle = '#ff6b6b'; ctx.lineWidth = 1.5; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(tx, yFlange); ctx.lineTo(tx + tauMax + 20, yFlange); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(tx, cy+bh/2); ctx.lineTo(tx + tauMax + 20, cy+bh/2); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 突變標注
+  ctx.fillStyle = '#ff6b6b'; ctx.font = '9px Segoe UI';
+  ctx.fillText('τ₁(翼)', tx + tau1_f + 2, yFlange - 3);
+  ctx.fillText('3×τ₁(腹)', tx + tau1_w + 2, yFlange + 10);
+
+  // τmax 標注
+  ctx.fillStyle = '#06d6a0'; ctx.font = 'bold 10px Segoe UI';
+  ctx.fillText('τmax', tx + tauMax + 3, cy + 4);
+
+  // 剪應力標題
+  ctx.fillStyle = '#06d6a0'; ctx.font = 'bold 10px Segoe UI';
+  ctx.fillText('τ分布', tx - 5, topY - 8);
+
+  // 中性軸虛線延伸到剪應力圖
+  ctx.setLineDash([4,3]); ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(cx + tw + 10, cy); ctx.lineTo(tx + tauMax + 30, cy); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 標題
+  ctx.fillStyle = '#888'; ctx.font = '10px Segoe UI';
+  ctx.fillText('斷面', cx - 10, topY - 8);
+})();
+
+// ========================
+// 剪力圖 + 彎矩圖
+// ========================
+(function(){
+  const cv = document.getElementById('cvDiagram');
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0,0,W,H);
+
+  const margin = {left: 50, right: 30, top: 20, bottom: 30};
+  const halfH = (H - margin.top - margin.bottom - 20) / 2;
+  const pw = W - margin.left - margin.right;
+
+  // ---- 剪力圖 ----
+  const vY = margin.top + halfH/2;
+  const vAmp = halfH*0.38;
+
+  ctx.fillStyle = '#1e3a5f';
+  ctx.beginPath();
+  ctx.moveTo(margin.left, vY);
+  ctx.lineTo(margin.left, vY - vAmp);
+  ctx.lineTo(margin.left + pw/2, vY - vAmp);
+  ctx.lineTo(margin.left + pw/2, vY + vAmp);
+  ctx.lineTo(margin.left + pw, vY + vAmp);
+  ctx.lineTo(margin.left + pw, vY);
+  ctx.closePath(); ctx.fill();
+
+  ctx.strokeStyle = '#ff9f1c'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(margin.left, vY);
+  ctx.lineTo(margin.left, vY - vAmp);
+  ctx.lineTo(margin.left + pw/2, vY - vAmp);
+  ctx.lineTo(margin.left + pw/2, vY + vAmp);
+  ctx.lineTo(margin.left + pw, vY + vAmp);
+  ctx.lineTo(margin.left + pw, vY);
+  ctx.stroke();
+
+  // Axis
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(margin.left-5, vY); ctx.lineTo(margin.left+pw+5, vY); ctx.stroke();
+
+  ctx.fillStyle = '#ff9f1c'; ctx.font = 'bold 10px Segoe UI';
+  ctx.fillText('+P/2', margin.left + pw/4 - 10, vY - vAmp - 5);
+  ctx.fillText('-P/2', margin.left + 3*pw/4 - 10, vY + vAmp + 12);
+
+  ctx.fillStyle = '#aaa'; ctx.font = '11px Segoe UI';
+  ctx.fillText('V(x)', margin.left - 30, vY - 4);
+  ctx.fillText('0', margin.left - 28, vY+4);
+
+  // V max markers
+  ctx.strokeStyle = '#ff6b6b'; ctx.setLineDash([3,3]); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(margin.left, vY - vAmp); ctx.lineTo(margin.left + pw/2, vY - vAmp); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ---- 彎矩圖 ----
+  const mY0 = margin.top + halfH + 20;
+  const mY = mY0 + halfH/2;
+  const mAmp = halfH * 0.42;
+
+  ctx.fillStyle = 'rgba(100,149,237,0.2)';
+  ctx.beginPath();
+  ctx.moveTo(margin.left, mY);
+  ctx.quadraticCurveTo(margin.left + pw/2, mY + mAmp, margin.left + pw, mY);
+  ctx.closePath(); ctx.fill();
+
+  ctx.strokeStyle = '#6495ed'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(margin.left, mY);
+  ctx.quadraticCurveTo(margin.left + pw/2, mY + mAmp, margin.left + pw, mY);
+  ctx.stroke();
+
+  // Axis
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(margin.left-5, mY); ctx.lineTo(margin.left+pw+5, mY); ctx.stroke();
+
+  ctx.fillStyle = '#6495ed'; ctx.font = 'bold 10px Segoe UI';
+  ctx.fillText('PL/4', margin.left + pw/2 - 15, mY + mAmp + 12);
+
+  ctx.fillStyle = '#aaa'; ctx.font = '11px Segoe UI';
+  ctx.fillText('M(x)', margin.left - 32, mY - 4);
+  ctx.fillText('0', margin.left - 28, mY + 4);
+
+  // x-axis labels
+  ctx.fillStyle = '#888'; ctx.font = '10px Segoe UI';
+  ctx.fillText('0', margin.left - 5, mY + halfH/2 + 14);
+  ctx.fillText('L/2', margin.left + pw/2 - 10, mY + halfH/2 + 14);
+  ctx.fillText('L', margin.left + pw - 5, mY + halfH/2 + 14);
+
+  // Mark positions
+  ctx.strokeStyle = '#555'; ctx.setLineDash([3,3]); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(margin.left + pw/2, mY - 5); ctx.lineTo(margin.left + pw/2, mY + mAmp + 5); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // P arrow at midspan (top of diagram)
+  ctx.strokeStyle = '#ff9f1c'; ctx.lineWidth = 2; ctx.fillStyle = '#ff9f1c';
+  const arrowX = margin.left + pw/2;
+  ctx.beginPath();
+  ctx.moveTo(arrowX, margin.top);
+  ctx.lineTo(arrowX, margin.top + 12);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(arrowX, margin.top+12);
+  ctx.lineTo(arrowX-5, margin.top+5);
+  ctx.lineTo(arrowX+5, margin.top+5);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#ff9f1c'; ctx.font = 'bold 10px Segoe UI';
+  ctx.fillText('P↓', arrowX+5, margin.top+10);
+
+  // 標題
+  ctx.fillStyle = '#ffd166'; ctx.font = 'bold 10px Segoe UI';
+  ctx.fillText('剪力圖 V(x)', margin.left + pw/2 - 30, margin.top + 5);
+  ctx.fillText('彎矩圖 M(x)', margin.left + pw/2 - 30, mY0 + 4);
+})();
+</script>
+</body>
+</html>

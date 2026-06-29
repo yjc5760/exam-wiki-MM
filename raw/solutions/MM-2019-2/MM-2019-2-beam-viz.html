@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>MM-2019-2 箱型梁分析</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 20px; }
+  h1 { text-align: center; font-size: 1.2em; color: #7ec8e3; margin-bottom: 6px; }
+  .subtitle { text-align: center; font-size: 0.85em; color: #aaa; margin-bottom: 16px; }
+
+  .panel { background: #16213e; border: 1px solid #0f3460; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .panel h2 { font-size: 0.95em; color: #7ec8e3; margin-bottom: 10px; border-bottom: 1px solid #0f3460; padding-bottom: 6px; }
+
+  canvas { display: block; width: 100%; }
+
+  .result-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .result-box { background: #0f3460; border-radius: 8px; padding: 10px; text-align: center; }
+  .result-box .label { font-size: 0.72em; color: #aaa; margin-bottom: 4px; }
+  .result-box .value { font-size: 1.1em; font-weight: bold; color: #4fc3f7; }
+  .result-box .unit { font-size: 0.75em; color: #7ec8e3; margin-top: 2px; }
+
+  .section-row { display: flex; gap: 14px; }
+  .section-canvas { flex: 0 0 180px; }
+  .section-info { flex: 1; }
+  .section-info table { width: 100%; font-size: 0.8em; border-collapse: collapse; }
+  .section-info td { padding: 4px 8px; border-bottom: 1px solid #1a3a5c; }
+  .section-info td:first-child { color: #aaa; }
+  .section-info td:last-child { color: #4fc3f7; font-weight: bold; text-align: right; }
+
+  .slider-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .slider-row label { color: #aaa; font-size: 0.8em; min-width: 140px; }
+  .slider-row input[type=range] { flex: 1; accent-color: #4fc3f7; }
+  .slider-val { font-size: 0.85em; color: #4fc3f7; min-width: 70px; text-align: right; }
+
+  .stress-display { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .stress-box { background: #0a2240; border-radius: 6px; padding: 8px; text-align: center; }
+  .stress-box .s-label { font-size: 0.7em; color: #aaa; }
+  .stress-box .s-value { font-size: 1.0em; font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>MM-2019-2｜箱型梁分析</h1>
+<div class="subtitle">300×300 mm 箱型梁（壁厚 25 mm）｜均布載重 q = 5 kN/m｜支承 A(鉸)–B(滾)–C(自由端)</div>
+
+<!-- 結果卡片 -->
+<div class="panel">
+  <h2>關鍵結果</h2>
+  <div class="result-grid">
+    <div class="result-box">
+      <div class="label">均布載重 q</div>
+      <div class="value">5</div>
+      <div class="unit">kN/m</div>
+    </div>
+    <div class="result-box">
+      <div class="label">R_A（鉸，向上）</div>
+      <div class="value">2.1875</div>
+      <div class="unit">kN</div>
+    </div>
+    <div class="result-box">
+      <div class="label">R_B（滾，向上）</div>
+      <div class="value">15.3125</div>
+      <div class="unit">kN</div>
+    </div>
+    <div class="result-box">
+      <div class="label">M 最大（B 截面）</div>
+      <div class="value">5.625</div>
+      <div class="unit">kN·m（負彎矩）</div>
+    </div>
+    <div class="result-box">
+      <div class="label">V_max</div>
+      <div class="value">7.8125</div>
+      <div class="unit">kN（B 左截面）</div>
+    </div>
+    <div class="result-box">
+      <div class="label">τ_xy_max</div>
+      <div class="value">0.636</div>
+      <div class="unit">MPa</div>
+    </div>
+    <div class="result-box">
+      <div class="label">σ_x_max</div>
+      <div class="value">2.414</div>
+      <div class="unit">MPa</div>
+    </div>
+    <div class="result-box">
+      <div class="label">I_z</div>
+      <div class="value">3.495×10⁸</div>
+      <div class="unit">mm⁴</div>
+    </div>
+  </div>
+</div>
+
+<!-- 剪力圖 + 彎矩圖 -->
+<div class="panel">
+  <h2>剪力圖（上）與彎矩圖（下）</h2>
+  <canvas id="diagrams" height="320"></canvas>
+</div>
+
+<!-- 斷面性質 -->
+<div class="panel">
+  <h2>箱型斷面性質與剪應力分布</h2>
+  <div class="section-row">
+    <div class="section-canvas">
+      <canvas id="section" width="180" height="220"></canvas>
+    </div>
+    <div class="section-info">
+      <table>
+        <tr><td>外廓尺寸</td><td>300 × 300 mm</td></tr>
+        <tr><td>壁厚 t</td><td>25 mm</td></tr>
+        <tr><td>內孔尺寸</td><td>250 × 250 mm</td></tr>
+        <tr><td>I_z</td><td>3.495×10⁸ mm⁴</td></tr>
+        <tr><td>Q（中性軸）</td><td>1,421,875 mm³</td></tr>
+        <tr><td>有效寬度 b（中性軸）</td><td>50 mm（兩腹板）</td></tr>
+        <tr><td>c（最遠纖維）</td><td>150 mm</td></tr>
+        <tr><td>τ_max（中性軸）</td><td>0.636 MPa</td></tr>
+        <tr><td>σ_max（上下緣）</td><td>±2.414 MPa</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 互動：查詢截面應力 -->
+<div class="panel">
+  <h2>互動：沿梁軸查詢截面應力</h2>
+  <div class="slider-row">
+    <label>查詢位置 x (m)</label>
+    <input type="range" id="xSlider" min="0" max="350" step="1" value="200">
+    <span class="slider-val" id="xVal">2.00 m</span>
+  </div>
+  <div class="slider-row">
+    <label>截面高度 y (mm)</label>
+    <input type="range" id="ySlider" min="-150" max="150" step="5" value="0">
+    <span class="slider-val" id="yVal">0 mm（中性軸）</span>
+  </div>
+  <div class="stress-display">
+    <div class="stress-box">
+      <div class="s-label">剪力 V(x)</div>
+      <div class="s-value" id="shearVal" style="color:#f4a261">—</div>
+    </div>
+    <div class="stress-box">
+      <div class="s-label">彎矩 M(x)</div>
+      <div class="s-value" id="momentVal" style="color:#e9c46a">—</div>
+    </div>
+    <div class="stress-box">
+      <div class="s-label">剪應力 τ_xy(y)</div>
+      <div class="s-value" id="tauVal" style="color:#2a9d8f">—</div>
+    </div>
+    <div class="stress-box">
+      <div class="s-label">正向應力 σ_x(y)</div>
+      <div class="s-value" id="sigVal" style="color:#e76f51">—</div>
+    </div>
+  </div>
+  <canvas id="stressCanvas" height="120" style="margin-top:12px;"></canvas>
+</div>
+
+<script>
+// ─── 常數 ───────────────────────────────────────────────────────────────
+const q = 5;        // kN/m
+const RA = 2.1875;  // kN
+const RB = 15.3125; // kN
+const L_AB = 2.0;   // m
+const L_BC = 1.5;   // m
+const L_total = 3.5;// m
+
+// 斷面
+const Iz = 349479167; // mm⁴
+const Q0 = 1421875;   // mm³ (NA)
+const b0 = 50;        // mm
+const c = 150;        // mm
+
+// ─── 函數 ───────────────────────────────────────────────────────────────
+function shear(x) {  // kN, x in m
+  if (x < 0 || x > L_total) return 0;
+  if (x <= L_AB) return RA - q * x;
+  // x > L_AB
+  return RA - q * x + RB;
+}
+
+function moment(x) {  // kN·m, x in m
+  if (x < 0 || x > L_total) return 0;
+  if (x <= L_AB) return RA * x - q * x * x / 2;
+  return RA * x - q * x * x / 2 + RB * (x - L_AB);
+}
+
+// Q at height y for hollow box
+function Q_at_y(y_mm) {
+  // y in [-150, 150]
+  const ay = Math.abs(y_mm);
+  if (ay >= 150) return 0;
+  // material above |y|
+  // Q(y) = 1,421,875 - 25*y^2 for |y| in [0,125] (web region)
+  // Q(y) = 150*(150^2 - y^2) for |y| in [125, 150] (flange region)
+  if (ay >= 125) {
+    return 150 * (150 * 150 - ay * ay);
+  } else {
+    return 1421875 - 25 * ay * ay;
+  }
+}
+
+function b_at_y(y_mm) {
+  const ay = Math.abs(y_mm);
+  if (ay >= 150) return 0;
+  if (ay >= 125) return 300; // top/bottom flange
+  return 50; // two webs
+}
+
+function tau_xy(V_kN, y_mm) {
+  const V_N = V_kN * 1000;
+  const Q = Q_at_y(y_mm);
+  const b = b_at_y(y_mm);
+  if (b === 0) return 0;
+  return V_N * Q / (Iz * b); // N/mm² = MPa
+}
+
+function sigma_x(M_kNm, y_mm) {
+  const M_Nmm = M_kNm * 1e6;
+  return M_Nmm * y_mm / Iz; // MPa
+}
+
+// ─── Canvas 1: Shear + Moment diagrams ──────────────────────────────────
+function drawDiagrams() {
+  const canvas = document.getElementById('diagrams');
+  const W = canvas.parentElement.clientWidth - 28;
+  canvas.width = W;
+  canvas.height = 320;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, 320);
+
+  const pad = { left: 55, right: 20, top: 10, mid: 160, bottom: 310 };
+  const beamW = W - pad.left - pad.right;
+
+  function xPx(x_m) { return pad.left + x_m / L_total * beamW; }
+  const B_px = xPx(L_AB);
+
+  // ── Shear diagram (top half) ──────────────────────────────────────────
+  const shearMax = 10; // kN scale
+  function vyPx(V) { return 90 - V / shearMax * 70; }
+
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
+  ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(pad.left, vyPx(0)); ctx.lineTo(pad.left + beamW, vyPx(0)); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Fill area
+  const N = 200;
+  ctx.fillStyle = 'rgba(78, 195, 247, 0.18)';
+  ctx.beginPath();
+  ctx.moveTo(xPx(0), vyPx(0));
+  for (let i = 0; i <= N; i++) {
+    const x = i / N * L_total;
+    const xp = (i / N * L_total >= L_AB - 0.001 && i / N * L_total <= L_AB + 0.001) ? null : x;
+    if (xp !== null) {
+      ctx.lineTo(xPx(x), vyPx(shear(x)));
+    }
+  }
+  // Handle the jump at B
+  ctx.lineTo(xPx(L_total), vyPx(0));
+  ctx.closePath();
+  ctx.fill();
+
+  // Draw shear line (with jump at B)
+  ctx.strokeStyle = '#4fc3f7'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i <= N; i++) {
+    const x = i / N * L_AB;
+    i === 0 ? ctx.moveTo(xPx(x), vyPx(shear(x))) : ctx.lineTo(xPx(x), vyPx(shear(x)));
+  }
+  ctx.stroke();
+  // Jump at B
+  ctx.beginPath();
+  ctx.moveTo(B_px, vyPx(shear(L_AB - 0.001)));
+  ctx.lineTo(B_px, vyPx(shear(L_AB + 0.001)));
+  ctx.strokeStyle = '#4fc3f7'; ctx.lineWidth = 1.5; ctx.setLineDash([3,3]);
+  ctx.stroke(); ctx.setLineDash([]);
+  // After B
+  ctx.strokeStyle = '#4fc3f7'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i <= N; i++) {
+    const x = L_AB + i / N * L_BC;
+    i === 0 ? ctx.moveTo(xPx(x), vyPx(shear(x + 0.001))) : ctx.lineTo(xPx(x), vyPx(shear(x)));
+  }
+  ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = '#4fc3f7'; ctx.font = '11px Arial'; ctx.textAlign = 'left';
+  ctx.fillText('剪力圖 V (kN)', pad.left, 18);
+  ctx.fillStyle = '#f4a261';
+  ctx.textAlign = 'center';
+  ctx.fillText('+2.1875', xPx(0.1), vyPx(RA) - 5);
+  ctx.fillText('-7.8125', xPx(L_AB - 0.15), vyPx(-7.8125) + 14);
+  ctx.fillText('+7.5', xPx(L_AB + 0.15), vyPx(7.5) - 5);
+
+  // Beam line and supports
+  const beamY = 95;
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad.left, beamY); ctx.lineTo(pad.left + beamW, beamY); ctx.stroke();
+  // A: pin
+  ctx.fillStyle = '#aaa';
+  ctx.beginPath();
+  ctx.moveTo(xPx(0), beamY); ctx.lineTo(xPx(0)-8, beamY+12); ctx.lineTo(xPx(0)+8, beamY+12); ctx.closePath(); ctx.fill();
+  // B: roller
+  ctx.beginPath();
+  ctx.arc(xPx(L_AB), beamY+14, 5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(xPx(L_AB), beamY); ctx.lineTo(xPx(L_AB), beamY+9); ctx.stroke();
+  // C
+  ctx.fillStyle='#aaa'; ctx.font='11px Arial'; ctx.textAlign='center';
+  ctx.fillText('A',xPx(0),beamY+26); ctx.fillText('B',xPx(L_AB),beamY+26); ctx.fillText('C',xPx(L_total),beamY+26);
+
+  // ── Moment diagram (bottom half) ──────────────────────────────────────
+  const momMax = 7; // kN·m scale
+  const mBase = 230;
+  function myPx(M) { return mBase - M / momMax * 65; }
+
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
+  ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(pad.left, myPx(0)); ctx.lineTo(pad.left + beamW, myPx(0)); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Fill
+  ctx.fillStyle = 'rgba(233,196,106,0.18)';
+  ctx.beginPath();
+  ctx.moveTo(xPx(0), myPx(0));
+  for (let i = 0; i <= N; i++) {
+    const x = i / N * L_total;
+    ctx.lineTo(xPx(x), myPx(moment(x)));
+  }
+  ctx.lineTo(xPx(L_total), myPx(0));
+  ctx.closePath(); ctx.fill();
+
+  ctx.strokeStyle = '#e9c46a'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i <= N; i++) {
+    const x = i / N * L_total;
+    i === 0 ? ctx.moveTo(xPx(x), myPx(moment(x))) : ctx.lineTo(xPx(x), myPx(moment(x)));
+  }
+  ctx.stroke();
+
+  ctx.fillStyle = '#4fc3f7'; ctx.font = '11px Arial'; ctx.textAlign = 'left';
+  ctx.fillText('彎矩圖 M (kN·m)', pad.left, mBase - 70);
+  ctx.fillStyle = '#e9c46a'; ctx.textAlign = 'center';
+  ctx.fillText('+0.479', xPx(0.437), myPx(0.479) - 5);
+  ctx.fillText('-5.625', xPx(L_AB) - 20, myPx(-5.625) + 14);
+
+  // Axis ticks
+  ctx.fillStyle = '#888'; ctx.textAlign = 'right'; ctx.font = '10px Arial';
+  for (let v = -8; v <= 8; v += 4) {
+    if (Math.abs(v) <= shearMax) {
+      ctx.fillText(v, pad.left - 5, vyPx(v) + 4);
+    }
+  }
+  for (let m = -6; m <= 1; m += 2) {
+    ctx.fillText(m, pad.left - 5, myPx(m) + 4);
+  }
+}
+
+// ─── Canvas 2: Cross-section ─────────────────────────────────────────────
+function drawSection() {
+  const canvas = document.getElementById('section');
+  const ctx = canvas.getContext('2d');
+  const W = 180, H = 220;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0f2035'; ctx.fillRect(0, 0, W, H);
+
+  const cx = 90, cy = 110;
+  const scale = 0.45; // 1mm = 0.45px
+  const outer = 300 * scale / 2; // 67.5px
+  const inner = 250 * scale / 2; // 56.25px
+
+  // Outer box
+  ctx.fillStyle = '#3a7bd5';
+  ctx.fillRect(cx - outer, cy - outer, outer*2, outer*2);
+  // Inner void
+  ctx.fillStyle = '#0f2035';
+  ctx.fillRect(cx - inner, cy - inner, inner*2, inner*2);
+
+  // NA line
+  ctx.strokeStyle = '#f4a261'; ctx.lineWidth = 1.5; ctx.setLineDash([5,4]);
+  ctx.beginPath(); ctx.moveTo(cx - outer - 5, cy); ctx.lineTo(cx + outer + 5, cy); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#f4a261'; ctx.font = '10px Arial'; ctx.textAlign = 'left';
+  ctx.fillText('NA', cx + outer + 4, cy + 3);
+
+  // Dimension
+  ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(cx + outer + 10, cy - outer); ctx.lineTo(cx + outer + 10, cy + outer); ctx.stroke();
+  ctx.fillStyle = '#aaa'; ctx.textAlign = 'center'; ctx.font = '10px Arial';
+  ctx.fillText('300', cx + outer + 18, cy + 4);
+
+  // Label
+  ctx.fillStyle = '#7ec8e3'; ctx.textAlign = 'center'; ctx.font = '11px bold Arial';
+  ctx.fillText('300×300 箱型', cx, cy + outer + 18);
+  ctx.font = '10px Arial'; ctx.fillStyle = '#aaa';
+  ctx.fillText('t = 25 mm', cx, cy + outer + 32);
+}
+
+// ─── Canvas 3: Stress distribution at x ─────────────────────────────────
+function drawStressCanvas(x_m, y_mm) {
+  const canvas = document.getElementById('stressCanvas');
+  const W = canvas.parentElement.clientWidth - 28;
+  canvas.width = W; canvas.height = 120;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, 120);
+
+  const V = shear(x_m);
+  const M = moment(x_m);
+
+  // Draw shear stress distribution
+  const pad = 50; const h = 100; const cy = 60;
+  const bW = (W - 2*pad - 40) / 2;
+
+  // Shear stress over height
+  ctx.strokeStyle = '#2a9d8f'; ctx.lineWidth = 2;
+  const tauArr = [];
+  for (let i = 0; i <= 60; i++) {
+    const y = -150 + i * 5;
+    tauArr.push({ y, tau: Math.abs(tau_xy(V, y)) });
+  }
+  const tauMax2 = Math.max(...tauArr.map(d => d.tau));
+  const tScale = tauMax2 > 0 ? bW / tauMax2 * 0.9 : 1;
+
+  ctx.beginPath();
+  tauArr.forEach((d, i) => {
+    const yp = cy - d.y / 150 * h * 0.5;
+    const xp = pad + d.tau * tScale;
+    i === 0 ? ctx.moveTo(xp, yp) : ctx.lineTo(xp, yp);
+  });
+  ctx.stroke();
+  ctx.setLineDash([3,3]);
+  ctx.strokeStyle = '#444';
+  ctx.beginPath(); ctx.moveTo(pad, cy - h*0.5); ctx.lineTo(pad, cy + h*0.5); ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = '#2a9d8f'; ctx.font = '10px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('剪應力 τ_xy', pad + bW*0.5, 12);
+  ctx.fillText(`max: ${(tauMax2).toFixed(3)} MPa`, pad + bW*0.5, 24);
+
+  // Normal stress over height
+  const sigArr = [];
+  for (let i = 0; i <= 60; i++) {
+    const y = -150 + i * 5;
+    sigArr.push({ y, sig: sigma_x(M, y) });
+  }
+  const sigMax2 = Math.max(...sigArr.map(d => Math.abs(d.sig)));
+  const sScale = sigMax2 > 0 ? bW / sigMax2 * 0.9 : 1;
+  const ox = pad + bW + 40;
+
+  ctx.strokeStyle = '#e76f51'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  sigArr.forEach((d, i) => {
+    const yp = cy - d.y / 150 * h * 0.5;
+    const xp = ox + d.sig * sScale;
+    i === 0 ? ctx.moveTo(xp, yp) : ctx.lineTo(xp, yp);
+  });
+  ctx.stroke();
+  ctx.setLineDash([3,3]);
+  ctx.strokeStyle = '#444';
+  ctx.beginPath(); ctx.moveTo(ox, cy - h*0.5); ctx.lineTo(ox, cy + h*0.5); ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = '#e76f51'; ctx.textAlign = 'center';
+  ctx.fillText('正向應力 σ_x', ox + bW*0.5, 12);
+  ctx.fillText(`max: ±${(sigMax2).toFixed(3)} MPa`, ox + bW*0.5, 24);
+
+  // Mark query point
+  const qY_tau = cy - y_mm / 150 * h * 0.5;
+  const qTau = Math.abs(tau_xy(V, y_mm));
+  ctx.fillStyle = '#fff'; ctx.beginPath();
+  ctx.arc(pad + qTau * tScale, qY_tau, 4, 0, Math.PI*2); ctx.fill();
+  const qSig = sigma_x(M, y_mm);
+  ctx.fillStyle = '#fff'; ctx.beginPath();
+  ctx.arc(ox + qSig * sScale, qY_tau, 4, 0, Math.PI*2); ctx.fill();
+}
+
+// ─── Interactive slider ──────────────────────────────────────────────────
+function updateStress() {
+  const x_m = document.getElementById('xSlider').value / 100;
+  const y_mm = parseFloat(document.getElementById('ySlider').value);
+
+  document.getElementById('xVal').textContent = x_m.toFixed(2) + ' m';
+  const yDesc = y_mm === 0 ? '0 mm（中性軸）' : (y_mm > 0 ? `+${y_mm} mm（上）` : `${y_mm} mm（下）`);
+  document.getElementById('yVal').textContent = yDesc;
+
+  const V = shear(x_m);
+  const M = moment(x_m);
+  const tau = tau_xy(V, y_mm);
+  const sig = sigma_x(M, y_mm);
+
+  document.getElementById('shearVal').textContent = V.toFixed(4) + ' kN';
+  document.getElementById('momentVal').textContent = M.toFixed(4) + ' kN·m';
+  document.getElementById('tauVal').textContent = tau.toFixed(4) + ' MPa';
+  document.getElementById('sigVal').textContent = (sig >= 0 ? '+' : '') + sig.toFixed(4) + ' MPa';
+
+  drawStressCanvas(x_m, y_mm);
+}
+
+document.getElementById('xSlider').addEventListener('input', updateStress);
+document.getElementById('ySlider').addEventListener('input', updateStress);
+
+// ─── Init ────────────────────────────────────────────────────────────────
+window.addEventListener('resize', () => { drawDiagrams(); });
+drawDiagrams();
+drawSection();
+updateStress();
+</script>
+</body>
+</html>

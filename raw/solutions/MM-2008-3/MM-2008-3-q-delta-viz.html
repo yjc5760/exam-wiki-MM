@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>MM-2008-3 q-δ 關係圖</title>
+<style>
+  body { font-family: 'Noto Sans TC', sans-serif; background: #1a1a2e; color: #eee; margin: 0; display: flex; flex-direction: column; align-items: center; padding: 16px; }
+  h2 { font-size: 15px; color: #a0d4ff; margin: 0 0 4px; }
+  .subtitle { font-size: 12px; color: #888; margin-bottom: 12px; }
+  canvas { background: #12122a; border: 1px solid #334; border-radius: 8px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; font-size: 12px; }
+  .leg-item { display: flex; align-items: center; gap: 6px; }
+  .leg-color { width: 24px; height: 4px; border-radius: 2px; }
+  .formulas { background: #1e1e3a; border: 1px solid #334; border-radius: 8px; padding: 10px 14px; margin-top: 12px; font-size: 12px; color: #ccc; width: 548px; box-sizing: border-box; }
+  .formulas b { color: #a0d4ff; }
+  .row { display: flex; justify-content: space-between; margin: 3px 0; }
+</style>
+</head>
+<body>
+<h2>MM-2008-3：兩端固定梁（完全彈塑性）q-δ 關係圖</h2>
+<div class="subtitle">矩形斷面 b×h，長度 L，均布載重 q，中點撓度 δ</div>
+<canvas id="cv" width="580" height="400"></canvas>
+<div class="legend">
+  <div class="leg-item"><div class="leg-color" style="background:#4fc3f7"></div>Stage 1 彈性</div>
+  <div class="leg-item"><div class="leg-color" style="background:#ffd54f"></div>Stage 2 漸進降伏（示意）</div>
+  <div class="leg-item"><div class="leg-color" style="background:#81c784"></div>Stage 3 兩端塑性鉸</div>
+  <div class="leg-item"><div class="leg-color" style="background:#ef5350"></div>崩潰線 q = q_p</div>
+</div>
+<div class="formulas">
+  <div class="row"><span><b>首次降伏：</b> q_Y = 2σ_Y bh²/L²</span><span><b>δ_Y = σ_Y L²/(16Eh)</b></span></div>
+  <div class="row"><span><b>端部全塑（近似）：</b> q₁ ≈ 3σ_Y bh²/L²</span><span><b>δ₁ ≈ 3σ_Y L²/(32Eh)</b></span></div>
+  <div class="row"><span><b>崩潰（虛功法）：</b> q_p = 16M_p/L² = 4σ_Y bh²/L²</span><span><b>δ → ∞</b></span></div>
+  <div class="row"><span><b>Stage 1 剛度：</b> k₁ = 384EI/L⁴</span><span><b>Stage 3 剛度：</b> k₃ = k₁/5</span></div>
+  <div class="row"><span><b>q_p / q_Y = 2</b></span><span><b>δ(q=q_p) = 4δ_Y（機構前）</b></span></div>
+</div>
+<script>
+const canvas = document.getElementById('cv');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+// Layout
+const ml = 70, mr = 30, mt = 30, mb = 60;
+const pw = W - ml - mr, ph = H - mt - mb;
+
+// Reference values (normalized: qY=1, δY=1)
+const qY = 1, dY = 1;
+const q1 = 1.5;   // 3σbh²/L² = 1.5 × qY
+const qp = 2.0;   // 4σbh²/L² = 2 × qY
+// Stage 3: d = (5qL^4/384EI - MpL²/8EI) normalized
+// At q=q1: d_stage3 = 5*1.5/5 - (stage3 offset) ... let's compute in normalized coords
+// k1 (slope in normalized) = qY/dY = 1
+// k3 = k1/5 = 0.2
+// Stage 3 line: q - q1 = k3*(d - d1) where d1 is at transition
+// At Stage 3, d = 5q*dY/qY/5 - Mp*L²/(8EI*dY) ...
+// In normalized: d = q - offset_stage3 (using simply-supported formula)
+// Simply-supported: d_ss = 5q/(5*k1) = q (in normalized)
+// End moment M_p = 0.75 qY L² (since qY = 2σbh²/L², Mp = σbh²/4 → Mp = qY*L²/8 → normalized end moment offset)
+// δ_stage3 = 5qL^4/(384EI) - MpL²/(8EI) = dY*(5q/qY - 12Mp/qYL²*...)
+// Simpler: in normalized (dY=1, qY=1):
+//   Stage 1: d = q  (slope=1)
+//   Stage 3: d = 5q - 4  (such that at q=qp=2: d=5*2-4=6 ... but let me recalculate)
+// Actually: d_Y = qY*L^4/(384EI) = 1
+// Stage 3: d = (5q*L^4/384EI)/dY - (MpL^2/8EI)/dY
+//            = 5q/qY - (MpL^2/8EI)/(qYL^4/384EI)
+//            = 5q - Mp*48/(qY*L^2)
+// Mp = σbh²/4 = (qY*L²/2)*1/4*(6/1) ... wait
+// qY = 2σbh²/L² → σ = qYL²/(2bh²)
+// Mp = σbh²/4 = qYL²/(8) ... wait in what units?
+// Actually just use the formula: at q=qp=2qY: d = 4dY (from our calculation)
+// And Stage 3 is linear with slope k3=k1/5=0.2
+// So: at q=qp: d=4 (in normalized). Slope=0.2.
+// Line: d - 4 = 0.2*(q - qp) → d = 0.2*q + (4 - 0.2*qp) = 0.2q + 4 - 0.4 = 0.2q + 3.6
+// Check at q=q1=1.5: d = 0.2*1.5 + 3.6 = 0.3+3.6 = 3.9 ... hmm that's stage3 at q1
+// But from elastic approx at q1: d ≈ 1.5 (Stage 1 extrapolated)
+// There's a discontinuity. Let me reconsider.
+// The issue: Stage 2 is nonlinear and connects (dY, qY) to (d1, q1)
+// d1 (actual) > 1.5 because structure is softer in Stage 2
+// Stage 3 line: passes through (d_p_pre=4dY, qp=2qY) with slope k3=0.2
+// d - 4 = 0.2*(q - 2) → d = 0.2q + 3.6
+// At q=q1=1.5: d_stage3_start = 0.2*1.5 + 3.6 = 3.9
+// So the actual d1 ≈ 3.9δY (from Stage 3 formula)
+// Hmm, this seems large. Let me recalculate.
+// Actually I made an error. Let me redo.
+// In normalized units: qY=1, dY=1, Mp=qYL²/8... this is getting complicated.
+// Let me use the actual formulas:
+// Stage1: d = q/k1, k1=384EI/L^4 → d = qL^4/(384EI) (in actual units)
+// Stage3: d = 5qL^4/(384EI) - MpL^2/(8EI) (in actual units)
+// Normalized: divide by dY = qYL^4/(384EI)
+// d/dY = 5q/qY - Mp*384/(8*qY*L^2)
+// Mp = σbh²/4, qY = 2σbh²/L² → Mp = qY*L²/8
+// d/dY = 5q/qY - qY*L²/8 * 384/(8*qY*L^2) = 5q/qY - 384/64 = 5q/qY - 6
+// At q=qY: d/dY = 5 - 6 = -1 (negative - wrong! Stage 3 formula only applies after q1)
+// At q=q1=1.5qY: d/dY = 5*1.5 - 6 = 7.5-6 = 1.5
+// At q=qp=2qY: d/dY = 5*2-6 = 10-6 = 4 ✓ matches!
+// So Stage 3 normalized: d_norm = 5*q_norm - 6
+// At q_norm=1.5: d_norm=1.5 (same as elastic extrapolation! Makes sense for the approx)
+// At q_norm=2: d_norm=4 ✓
+// Slope of stage 3 in normalized: dd/dq = 5 → dq/dd = 0.2 (= k1/5) ✓
+
+// Plot parameters
+const q_max = 2.3;  // slightly above qp
+const d_max = 6.0;  // normalized max delta to show
+
+function toX(d_norm) { return ml + (d_norm / d_max) * pw; }
+function toY(q_norm) { return mt + ph - (q_norm / q_max) * ph; }
+
+// Background grid
+ctx.strokeStyle = '#223';
+ctx.lineWidth = 0.5;
+for (let q=0; q<=2.5; q+=0.5) {
+  ctx.beginPath(); ctx.moveTo(ml, toY(q)); ctx.lineTo(ml+pw, toY(q)); ctx.stroke();
+}
+for (let d=0; d<=6; d+=1) {
+  ctx.beginPath(); ctx.moveTo(toX(d), mt); ctx.lineTo(toX(d), mt+ph); ctx.stroke();
+}
+
+// Axes
+ctx.strokeStyle = '#aaa';
+ctx.lineWidth = 1.5;
+ctx.beginPath(); ctx.moveTo(ml, mt); ctx.lineTo(ml, mt+ph); ctx.lineTo(ml+pw, mt+ph); ctx.stroke();
+// Axis arrows
+ctx.beginPath(); ctx.moveTo(ml, mt); ctx.lineTo(ml-5, mt+10); ctx.lineTo(ml+5, mt+10); ctx.closePath(); ctx.fillStyle='#aaa'; ctx.fill();
+ctx.beginPath(); ctx.moveTo(ml+pw, mt+ph); ctx.lineTo(ml+pw-10, mt+ph-5); ctx.lineTo(ml+pw-10, mt+ph+5); ctx.closePath(); ctx.fill();
+
+// Axis labels
+ctx.fillStyle = '#ccc';
+ctx.font = '13px sans-serif';
+ctx.fillText('q', ml-12, mt+6);
+ctx.fillText('δ', ml+pw+8, mt+ph+5);
+
+// Tick marks & labels
+ctx.font = '11px sans-serif';
+ctx.fillStyle = '#999';
+ctx.textAlign = 'center';
+const qTicks = [{v:qY,label:'q_Y'},{v:q1,label:'q₁'},{v:qp,label:'q_p'}];
+qTicks.forEach(t => {
+  const y = toY(t.v);
+  ctx.strokeStyle='#556'; ctx.lineWidth=0.8;
+  ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(ml, y); ctx.lineTo(ml+pw, y); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle='#aaa'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(ml, y); ctx.lineTo(ml-5, y); ctx.stroke();
+  ctx.fillStyle='#ccc'; ctx.textAlign='right';
+  ctx.fillText(t.label, ml-7, y+4);
+});
+
+const dTicks = [{v:dY,label:'δ_Y'},{v:4,label:'4δ_Y'}];
+dTicks.forEach(t => {
+  const x = toX(t.v);
+  ctx.strokeStyle='#556'; ctx.lineWidth=0.8;
+  ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(x, mt); ctx.lineTo(x, mt+ph); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle='#aaa'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(x, mt+ph); ctx.lineTo(x, mt+ph+5); ctx.stroke();
+  ctx.fillStyle='#ccc'; ctx.textAlign='center';
+  ctx.fillText(t.label, x, mt+ph+16);
+});
+
+// Stage 1: linear, d_norm = q_norm, slope=1, from (0,0) to (dY, qY)=(1,1)
+ctx.strokeStyle = '#4fc3f7';
+ctx.lineWidth = 3;
+ctx.beginPath();
+ctx.moveTo(toX(0), toY(0));
+ctx.lineTo(toX(dY), toY(qY));
+ctx.stroke();
+
+// Stage 2: nonlinear from (dY, qY)=(1,1) to (1.5, 1.5)
+// Use a bezier curve to show the nonlinear transition
+ctx.strokeStyle = '#ffd54f';
+ctx.lineWidth = 3;
+ctx.beginPath();
+ctx.moveTo(toX(1), toY(1));
+// Control points: curve bends toward higher delta (softer than stage1)
+ctx.bezierCurveTo(
+  toX(1.8), toY(1.15),   // cp1: shift right (more delta for same q)
+  toX(1.4), toY(1.4),    // cp2
+  toX(1.5), toY(1.5)     // end point (q1, d1)
+);
+ctx.stroke();
+
+// Stage 3: linear, d_norm = 5*q_norm - 6, slope=5 in d vs q (i.e., dq/dd = 0.2)
+// From (1.5, 1.5) to (4, 2.0) (i.e., at d=4 → q=qp=2, and continues)
+ctx.strokeStyle = '#81c784';
+ctx.lineWidth = 3;
+ctx.beginPath();
+// Stage 3 line: d = 5q-6 → q = (d+6)/5
+// At q=1.5: d=1.5; at q=2: d=4
+const stage3Points = [];
+for (let q_n = 1.5; q_n <= qp + 0.01; q_n += 0.05) {
+  const d_n = 5*q_n - 6;
+  stage3Points.push([d_n, q_n]);
+}
+ctx.moveTo(toX(stage3Points[0][0]), toY(stage3Points[0][1]));
+stage3Points.forEach(([d_n, q_n]) => ctx.lineTo(toX(d_n), toY(q_n)));
+ctx.stroke();
+
+// Collapse line: q = qp, d → ∞ (horizontal dashed red line)
+ctx.strokeStyle = '#ef5350';
+ctx.lineWidth = 2.5;
+ctx.setLineDash([8, 4]);
+ctx.beginPath();
+ctx.moveTo(toX(4), toY(qp));
+ctx.lineTo(toX(d_max-0.2), toY(qp));
+ctx.stroke();
+// Arrow at end of collapse line
+ctx.setLineDash([]);
+ctx.fillStyle = '#ef5350';
+ctx.beginPath();
+const ax = toX(d_max - 0.3);
+const ay = toY(qp);
+ctx.moveTo(ax+12, ay);
+ctx.lineTo(ax+2, ay-5);
+ctx.lineTo(ax+2, ay+5);
+ctx.closePath();
+ctx.fill();
+
+// Mark key points
+const pts = [
+  {d:0, q:0, label:'O', color:'#fff'},
+  {d:dY, q:qY, label:'A(δ_Y, q_Y)', color:'#4fc3f7'},
+  {d:1.5, q:q1, label:'B(δ₁, q₁)', color:'#ffd54f'},
+  {d:4, q:qp, label:'C(4δ_Y, q_p)', color:'#81c784'},
+];
+pts.forEach(p => {
+  const x = toX(p.d), y = toY(p.q);
+  ctx.fillStyle = p.color;
+  ctx.beginPath();
+  ctx.arc(x, y, 5, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  ctx.fillStyle = p.color;
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = p.d < 2 ? 'left' : 'right';
+  ctx.fillText(p.label, x + (p.d < 2 ? 8 : -8), y - 7);
+});
+
+// Stage labels
+ctx.font = 'italic 11px sans-serif';
+ctx.fillStyle = '#4fc3f7';
+ctx.textAlign = 'left';
+ctx.fillText('Stage 1 (k₁)', toX(0.3), toY(0.5));
+
+ctx.fillStyle = '#ffd54f';
+ctx.fillText('Stage 2', toX(1.6), toY(1.15));
+
+ctx.fillStyle = '#81c784';
+ctx.fillText('Stage 3 (k₃=k₁/5)', toX(2.5), toY(1.8));
+
+ctx.fillStyle = '#ef5350';
+ctx.fillText('q_p（機構崩潰）', toX(4.5), toY(qp-0.08));
+
+ctx.fillStyle = '#999';
+ctx.font = '10px sans-serif';
+ctx.textAlign = 'center';
+ctx.fillText('δ → ∞', toX(5.5), toY(qp+0.12));
+</script>
+</body>
+</html>

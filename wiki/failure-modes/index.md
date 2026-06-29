@@ -1,9 +1,8 @@
-# 失敗模式層（RC）
+# wiki/failure-modes/ — MM 失效模式
 
-| 頁面 | 失敗類型 |
-|------|---------|
-| [彎曲失敗](flexure.md) | 過筋脆性破壞、欠筋、壓力筋未降伏、延性不足 |
-| [剪力失敗](shear.md) | 腹剪裂縫、彎剪裂縫、斷面壓碎、錨定失敗 |
-| [壓碎失敗](crushing.md) | 柱壓碎、梁壓碎、接頭破壞、扭力斷面壓碎 |
-| [撓度失敗](deflection.md) | 即時/長期撓度超限、預拱不足 |
-| [裂縫失敗](cracking.md) | 彎曲裂縫過寬、腹板裂縫、預力梁裂縫 |
+| 失效模式 | 頁面 | 對應考點 |
+|---------|------|---------|
+| 降伏（Yielding） | [[yielding]] | MM-U1-2, MM-U4 |
+| 挫屈（Buckling） | [[buckling]] | MM-U3-4 |
+| 斷裂（Fracture） | [[fracture]] | MM-U1-3 |
+| 過大變形 | [[excessive-deformation]] | MM-U3-2 |

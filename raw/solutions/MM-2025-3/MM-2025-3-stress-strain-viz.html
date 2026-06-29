@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>MM-2025-3 雙線性彈塑性 N–ΔT 關係曲線</title>
+<style>
+  body{font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif;background:#fafafa;margin:0;padding:10px;width:580px}
+  h3{margin:4px 0 8px;font-size:1rem}
+  .panel{background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px;margin-bottom:8px}
+  canvas{display:block;background:#fff}
+  .row{display:flex;align-items:center;gap:8px;font-size:.85rem;margin:6px 0}
+  input[type=range]{flex:1}
+  .note{font-size:.75rem;color:#666;margin-top:4px}
+  .val{font-weight:700;color:#0f766e}
+</style>
+</head>
+<body>
+<h3>MM-2025-3　溫度升高 ΔT 與桿內軸力 N（壓力）關係曲線</h3>
+<div class="panel">
+  <canvas id="cv" width="560" height="330"></canvas>
+  <div class="row"><span>ΔT：</span><input type="range" id="dt" min="0" max="600" value="100" step="1">
+    <span id="out" style="min-width:210px">ΔT = 100°C</span></div>
+  <div class="note">
+    轉折點：<b>(7.69, 0)</b> 間隙閉合 → <b>(65.38, 5000 N)</b> 桿 b 降伏（σ=100 MPa）→ <b>(469.2, 10000 N)</b> 桿 a 降伏（σ=200 MPa）。
+    斜率 86.7 → 12.4 → 8.7 N/°C（串聯切線勁度 × (αa+αb)L）。
+  </div>
+</div>
+<div class="panel">
+  <canvas id="cv2" width="560" height="220"></canvas>
+  <div class="note">雙線性材料曲線（σ–ε）：材料 a（藍）E₁=200 GPa→E₂=20 GPa @200 MPa；材料 b（橘）E₁=100 GPa→E₂=10 GPa @100 MPa。圓點＝目前 ΔT 下兩桿的應力狀態（兩桿應力相同）。</div>
+</div>
+<script>
+(function(){
+const T1=7.6923, T2=65.385, T3=469.18;
+function Nof(t){
+  if(t<=T1) return 0;
+  if(t<=T2) return 86.667*t-666.67;
+  if(t<=T3) return 12.381*t+4190.5;
+  return 8.6667*t+5933.3;
+}
+// ---- 圖1：N–ΔT ----
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const W=560,H=330,ml=60,mb=40,mt=15,mr=15;
+const Tmax=600,Nmax=12000;
+const sx=t=>ml+(W-ml-mr)*t/Tmax, sy=n=>H-mb-(H-mb-mt)*n/Nmax;
+function axes(c,w,h,l,b,t2,r,xm,ym,xl,yl){
+  c.strokeStyle='#94a3b8';c.lineWidth=1;c.beginPath();
+  c.moveTo(l,t2);c.lineTo(l,h-b);c.lineTo(w-r,h-b);c.stroke();
+  c.fillStyle='#334155';c.font='11px sans-serif';
+  c.fillText(xl,w-r-60,h-b+28);c.save();c.translate(14,t2+70);c.rotate(-Math.PI/2);c.fillText(yl,0,0);c.restore();
+}
+function draw(t){
+  ctx.clearRect(0,0,W,H);
+  axes(ctx,W,H,ml,mb,mt,mr,Tmax,Nmax,'ΔT (°C)','N 壓力 (N)');
+  // 格線與刻度
+  ctx.fillStyle='#64748b';ctx.font='10px sans-serif';
+  [0,100,200,300,400,500,600].forEach(v=>{ctx.fillText(v,sx(v)-8,H-mb+14);});
+  [0,2500,5000,7500,10000].forEach(v=>{ctx.fillText(v,ml-44,sy(v)+3);
+    ctx.strokeStyle='#eef2f7';ctx.beginPath();ctx.moveTo(ml,sy(v));ctx.lineTo(W-mr,sy(v));ctx.stroke();});
+  // 曲線
+  ctx.strokeStyle='#0f766e';ctx.lineWidth=2.2;ctx.beginPath();
+  for(let i=0;i<=600;i+=2){const x=sx(i),y=sy(Nof(i));i?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+  ctx.stroke();
+  // 轉折點
+  const pts=[[T1,0,'接觸 (7.69, 0)'],[T2,5000,'b 降伏 (65.4, 5000)'],[T3,10000,'a 降伏 (469, 10000)']];
+  pts.forEach(p=>{ctx.fillStyle='#dc2626';ctx.beginPath();ctx.arc(sx(p[0]),sy(p[1]),4,0,7);ctx.fill();
+    ctx.fillStyle='#dc2626';ctx.font='10px sans-serif';ctx.fillText(p[2],sx(p[0])+6,sy(p[1])-6);});
+  // 目前點
+  const N=Nof(t);
+  ctx.fillStyle='#2563eb';ctx.beginPath();ctx.arc(sx(t),sy(N),5,0,7);ctx.fill();
+  ctx.strokeStyle='#2563eb';ctx.setLineDash([3,3]);ctx.beginPath();
+  ctx.moveTo(sx(t),H-mb);ctx.lineTo(sx(t),sy(N));ctx.lineTo(ml,sy(N));ctx.stroke();ctx.setLineDash([]);
+  document.getElementById('out').innerHTML='ΔT = '+t+'°C → <span class="val">N = '+Math.round(N)+' N（σ = '+(N/50).toFixed(1)+' MPa）</span>';
+  draw2(N/50);
+}
+// ---- 圖2：σ–ε 材料曲線 ----
+const cv2=document.getElementById('cv2'),c2=cv2.getContext('2d');
+const W2=560,H2=220,ml2=55,mb2=32,mt2=12,mr2=15;
+const emax=0.03,smax=320;
+const sx2=e=>ml2+(W2-ml2-mr2)*e/emax, sy2=s=>H2-mb2-(H2-mb2-mt2)*s/smax;
+function epsOf(s,E1,E2,sy){return s<=sy? s/E1 : sy/E1+(s-sy)/E2;}
+function draw2(sig){
+  c2.clearRect(0,0,W2,H2);
+  axes(c2,W2,H2,ml2,mb2,mt2,mr2,emax,smax,'ε','σ (MPa)');
+  c2.fillStyle='#64748b';c2.font='10px sans-serif';
+  [0,0.01,0.02,0.03].forEach(v=>c2.fillText(v,sx2(v)-10,H2-mb2+13));
+  [0,100,200,300].forEach(v=>c2.fillText(v,ml2-32,sy2(v)+3));
+  const mats=[[200000,20000,200,'#2563eb','a'],[100000,10000,100,'#d97706','b']];
+  mats.forEach(m=>{
+    c2.strokeStyle=m[3];c2.lineWidth=2;c2.beginPath();
+    c2.moveTo(sx2(0),sy2(0));c2.lineTo(sx2(m[2]/m[0]),sy2(m[2]));
+    c2.lineTo(sx2(epsOf(smax,m[0],m[1],m[2])),sy2(smax));c2.stroke();
+    c2.fillStyle=m[3];c2.font='11px sans-serif';
+    c2.fillText('材料 '+m[4],sx2(epsOf(280,m[0],m[1],m[2]))-30,sy2(280)+(m[4]==='a'?-6:14));
+    const s=Math.min(sig,smax);
+    c2.beginPath();c2.arc(sx2(epsOf(s,m[0],m[1],m[2])),sy2(s),5,0,7);c2.fill();
+  });
+}
+document.getElementById('dt').addEventListener('input',e=>draw(+e.target.value));
+draw(100);
+})();
+</script>
+</body>
+</html>

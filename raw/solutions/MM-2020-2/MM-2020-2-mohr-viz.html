@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>MM-2020-2 莫爾圓分析</title>
+<style>
+  body { font-family: "Noto Sans TC", sans-serif; background:#f8f8f8; margin:0; padding:12px; }
+  .container { max-width:620px; margin:0 auto; background:#fff; border-radius:8px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.12); }
+  h3 { font-size:15px; margin:0 0 4px 0; color:#333; text-align:center; }
+  .subtitle { font-size:11px; color:#666; text-align:center; margin-bottom:10px; }
+  canvas { display:block; margin:0 auto; }
+  .result-box { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .result-item { flex:1; min-width:120px; background:#eef3ff; border-radius:4px; padding:8px; font-size:11px; text-align:center; }
+  .result-value { font-size:14px; font-weight:bold; color:#1a56db; margin-top:2px; }
+  .result-value.red { color:#e74c3c; }
+  .note { font-size:10.5px; color:#555; margin-top:10px; background:#f3f3f3; padding:8px; border-radius:4px; line-height:1.7; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h3>MM-2020-2｜三方向應力狀態 — 莫爾圓</h3>
+  <p class="subtitle">σ₁=−10 MPa (140°)、σ₂=−1 MPa (90°)、σ₃=8 MPa (20°)，夾角 50° 與 70°</p>
+  <canvas id="c" width="580" height="380"></canvas>
+  <div class="result-box">
+    <div class="result-item">σ̄ (圓心)<div class="result-value">0.237 MPa</div></div>
+    <div class="result-item">R (半徑 = τ_max)<div class="result-value">10.68 MPa</div></div>
+    <div class="result-item">σ_max<div class="result-value">10.92 MPa</div></div>
+    <div class="result-item">σ_min<div class="result-value red">−10.45 MPa</div></div>
+  </div>
+  <div class="note">
+    <b>提示應用：</b> 2θ₁ = 280° = 180°+100°，故 cos280° = −cos100° = 0.1736、sin280° = −sin100° = −0.9848，
+    即題目提示 sin(100°)、cos(100°) 直接用於方程式 (C)。<br>
+    <b>驗算：</b> σ_x = 1.47 MPa, σ_y = −1 MPa, τ_xy = 10.61 MPa
+    → 代回三方程式均符合。
+  </div>
+</div>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = 580, H = 380;
+
+// Known values
+const sigX = 1.473, sigY = -1.0, tauXY = 10.61;
+const center = (sigX + sigY) / 2; // 0.237
+const halfDiff = (sigX - sigY) / 2; // 1.237
+const R = Math.sqrt(halfDiff*halfDiff + tauXY*tauXY); // 10.682
+const sigMax = center + R;  // 10.92
+const sigMin = center - R;  // -10.45
+
+// Three measured stresses
+const pts = [
+  { sigma: -10, theta: 140, label: 'σ₁=−10', color: '#e74c3c' },
+  { sigma: -1,  theta: 90,  label: 'σ₂=−1',  color: '#27ae60' },
+  { sigma: 8,   theta: 20,  label: 'σ₃=8',   color: '#8e44ad' },
+];
+
+// Canvas layout
+const ox = 310, oy = 195; // center of Mohr circle in canvas
+const scale = 14; // pixels per MPa
+
+function sx(sigma) { return ox + sigma * scale; }
+function sy(tau)   { return oy - tau * scale; }
+
+// Normal stress on plane at angle theta (degrees)
+function stressAt(deg) {
+  const theta = deg * Math.PI / 180;
+  const sigma = center + halfDiff * Math.cos(2*theta) + tauXY * Math.sin(2*theta);
+  const tau   = -halfDiff * Math.sin(2*theta) + tauXY * Math.cos(2*theta);
+  return { sigma, tau };
+}
+
+ctx.clearRect(0, 0, W, H);
+
+// Draw grid
+ctx.strokeStyle = '#eee'; ctx.lineWidth = 0.8;
+for (let v = -120; v <= 160; v += 20) {
+  const x = ox + v;
+  ctx.beginPath(); ctx.moveTo(x, 20); ctx.lineTo(x, H-20); ctx.stroke();
+}
+for (let v = -120; v <= 120; v += 20) {
+  const y = oy - v;
+  ctx.beginPath(); ctx.moveTo(30, y); ctx.lineTo(W-20, y); ctx.stroke();
+}
+
+// Axes
+ctx.strokeStyle = '#999'; ctx.lineWidth = 1;
+ctx.beginPath(); ctx.moveTo(25, oy); ctx.lineTo(W-15, oy); ctx.stroke();
+ctx.beginPath(); ctx.moveTo(ox, 15); ctx.lineTo(ox, H-15); ctx.stroke();
+
+// Axis labels
+ctx.fillStyle = '#777'; ctx.font = '10px sans-serif';
+ctx.textAlign = 'center';
+ctx.fillText('σ (MPa)', W-30, oy - 6);
+ctx.textAlign = 'right';
+ctx.fillText('τ', ox - 4, 22);
+ctx.textAlign = 'center';
+ctx.fillText('0', ox + 2, oy + 12);
+
+// Tick marks on sigma axis
+ctx.fillStyle = '#888'; ctx.font = '9px sans-serif';
+for (let v = -10; v <= 12; v += 2) {
+  const x = ox + v * scale;
+  ctx.beginPath(); ctx.moveTo(x, oy-3); ctx.lineTo(x, oy+3); ctx.stroke();
+  if (v !== 0) ctx.fillText(v, x, oy + 13);
+}
+// Tick marks on tau axis
+ctx.textAlign = 'right';
+for (let v = -10; v <= 10; v += 2) {
+  if (v === 0) continue;
+  const y = oy - v * scale;
+  ctx.beginPath(); ctx.moveTo(ox-3, y); ctx.lineTo(ox+3, y); ctx.stroke();
+  ctx.fillText(v, ox - 5, y + 3);
+}
+
+// Draw Mohr's circle
+ctx.beginPath();
+ctx.arc(sx(center), oy, R * scale, 0, 2 * Math.PI);
+ctx.strokeStyle = '#2980b9'; ctx.lineWidth = 2;
+ctx.stroke();
+ctx.fillStyle = 'rgba(41,128,185,0.07)';
+ctx.fill();
+
+// Center point
+ctx.beginPath();
+ctx.arc(sx(center), oy, 4, 0, 2 * Math.PI);
+ctx.fillStyle = '#2980b9'; ctx.fill();
+ctx.fillStyle = '#2980b9'; ctx.font = '10px sans-serif'; ctx.textAlign = 'left';
+ctx.fillText(`C = ${center.toFixed(2)}`, sx(center) + 6, oy - 6);
+
+// Principal stress points on sigma axis
+ctx.beginPath(); ctx.arc(sx(sigMax), oy, 5, 0, 2*Math.PI);
+ctx.fillStyle = '#e74c3c'; ctx.fill();
+ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+ctx.fillText(`σ_max=${sigMax.toFixed(2)}`, sx(sigMax), oy + 20);
+
+ctx.beginPath(); ctx.arc(sx(sigMin), oy, 5, 0, 2*Math.PI);
+ctx.fillStyle = '#c0392b'; ctx.fill();
+ctx.fillStyle = '#c0392b'; ctx.textAlign = 'center';
+ctx.fillText(`σ_min=${sigMin.toFixed(2)}`, sx(sigMin), oy + 20);
+
+// τ_max point (top of circle)
+ctx.beginPath(); ctx.arc(sx(center), oy - R*scale, 4, 0, 2*Math.PI);
+ctx.fillStyle = '#27ae60'; ctx.fill();
+ctx.fillStyle = '#27ae60'; ctx.font = '10px sans-serif'; ctx.textAlign = 'left';
+ctx.fillText(`τ_max=${R.toFixed(2)}`, sx(center) + 6, oy - R*scale - 4);
+
+// Draw the three measured points on the circle
+pts.forEach(pt => {
+  const st = stressAt(pt.theta);
+  const cx_ = sx(st.sigma);
+  const cy_ = sy(st.tau);
+  ctx.beginPath(); ctx.arc(cx_, cy_, 6, 0, 2*Math.PI);
+  ctx.fillStyle = pt.color; ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // Label
+  ctx.fillStyle = pt.color; ctx.font = 'bold 10px sans-serif';
+  const offX = st.sigma < center ? -8 : 8;
+  const offY = st.tau > 0 ? -8 : 12;
+  ctx.textAlign = offX < 0 ? 'right' : 'left';
+  ctx.fillText(`${pt.label} MPa`, cx_ + offX, cy_ + offY);
+
+  // Line from center to point
+  ctx.strokeStyle = pt.color + '88'; ctx.lineWidth = 1;
+  ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(sx(center), oy); ctx.lineTo(cx_, cy_); ctx.stroke();
+  ctx.setLineDash([]);
+});
+
+// Angle arc labels (physical angles)
+ctx.fillStyle = '#555'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+ctx.fillText('θ₁=140° (2θ=280°)', sx(center) - 20, oy + 40);
+ctx.fillText('θ₂=90°', sx(center) - 70, oy - 12);
+ctx.fillText('θ₃=20°', sx(center) + 60, oy - 40);
+
+// Title
+ctx.fillStyle = '#333'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'left';
+ctx.fillText('莫爾圓（Mohr\'s Circle）', 10, 16);
+</script>
+</body>
+</html>

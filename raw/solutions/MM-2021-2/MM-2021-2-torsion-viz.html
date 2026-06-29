@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>MM-2021-2 扭轉分析圖</title>
+<style>
+  body { font-family: "Noto Sans TC", sans-serif; background:#f8f8f8; margin:0; padding:12px; }
+  .container { max-width:580px; margin:0 auto; background:#fff; border-radius:8px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.12); }
+  h3 { font-size:15px; margin:0 0 6px 0; color:#333; text-align:center; }
+  .subtitle { font-size:11px; color:#666; text-align:center; margin-bottom:12px; }
+  canvas { display:block; width:100%; }
+  .legend { display:flex; gap:16px; margin-top:8px; font-size:11px; justify-content:center; flex-wrap:wrap; }
+  .legend-item { display:flex; align-items:center; gap:4px; }
+  .legend-color { width:18px; height:4px; border-radius:2px; }
+  .note { font-size:10.5px; color:#555; margin-top:10px; background:#f3f3f3; padding:8px; border-radius:4px; line-height:1.6; }
+  .result-box { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .result-item { flex:1; min-width:120px; background:#eef3ff; border-radius:4px; padding:8px; font-size:11px; text-align:center; }
+  .result-value { font-size:14px; font-weight:bold; color:#1a56db; margin-top:2px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h3>MM-2021-2｜扭轉分析圖</h3>
+  <p class="subtitle">靜不定複合扭轉：鋼桿 + 黃銅套管 (T = 10 kN·m, x = 1.60 m)</p>
+  <canvas id="c" height="420"></canvas>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-color" style="background:#c0392b"></div>黃銅套管 T_b</div>
+    <div class="legend-item"><div class="legend-color" style="background:#2980b9"></div>鋼桿 T_s</div>
+    <div class="legend-item"><div class="legend-color" style="background:#8e44ad"></div>扭轉角 φ(x)</div>
+  </div>
+  <div class="result-box">
+    <div class="result-item">x (BC 長)<div class="result-value">1.60 m</div></div>
+    <div class="result-item">T_max<div class="result-value">5.09 kN·m</div></div>
+    <div class="result-item">控制段<div class="result-value">CD 鋼桿</div></div>
+    <div class="result-item">φ_AD<div class="result-value">15.0°</div></div>
+  </div>
+  <div class="note">
+    <b>扭矩分布說明：</b><br>
+    AB 段（1m）：僅黃銅套管，T_b = T = 10 kN·m。<br>
+    BC 段（1.6m）：複合截面，T_b = 7.706 kN·m（77%），T_s = 2.294 kN·m（23%）。<br>
+    CD 段（2m）：僅鋼桿，T_s = T = 10 kN·m。<br>
+    <b>最大剪應力：</b>CD 段鋼桿 τ = T×30/J_s = 1620π×30/405000π = 120 MPa（控制）。
+  </div>
+</div>
+<script>
+const canvas = document.getElementById('c');
+const dpr = window.devicePixelRatio || 1;
+const W = canvas.parentElement.offsetWidth - 32;
+const H = 420;
+canvas.style.width = W + 'px';
+canvas.style.height = H + 'px';
+canvas.width = W * dpr;
+canvas.height = H * dpr;
+const ctx = canvas.getContext('2d');
+ctx.scale(dpr, dpr);
+
+// Layout
+const PAD_L = 48, PAD_R = 24, PAD_T = 40, PAD_B = 30;
+const plotW = W - PAD_L - PAD_R;
+const plotH = (H - PAD_T - PAD_B - 60) / 2; // two panels
+const panel1Y = PAD_T;         // torque diagram
+const panel2Y = PAD_T + plotH + 60; // twist angle diagram
+
+// Data
+const x_bc = 1.60;  // BC length
+const L_AB = 1.0, L_BC = x_bc, L_CD = 2.0;
+const L_total = L_AB + L_BC + L_CD;  // 4.6 m
+const T = 10.0;  // kN·m
+const Gs_Js = 32.4 * Math.PI;   // kN·m² (×10^9 N·mm²)
+const Gb_Jb = 108.8 * Math.PI;
+const GJ_sum = Gs_Js + Gb_Jb;
+const T_s_BC = T * Gs_Js / GJ_sum;
+const T_b_BC = T * Gb_Jb / GJ_sum;
+const phi_AB = T * 1 / Gb_Jb;           // rad
+const phi_BC = T * x_bc / GJ_sum;        // rad
+const phi_CD = T * 2 / Gs_Js;            // rad
+
+// x positions -> canvas x
+function toCanvasX(x) { return PAD_L + (x / L_total) * plotW; }
+
+// Draw a filled rect (torque bar)
+function drawBar(x0, x1, yCenter, halfH, color, label) {
+  const cx0 = toCanvasX(x0), cx1 = toCanvasX(x1);
+  ctx.fillStyle = color + '33';
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.fillRect(cx0, yCenter - halfH, cx1 - cx0, halfH * 2);
+  ctx.strokeRect(cx0, yCenter - halfH, cx1 - cx0, halfH * 2);
+  if (label) {
+    ctx.fillStyle = color;
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, (cx0 + cx1) / 2, yCenter - halfH - 4);
+  }
+}
+
+// ===== Panel 1: Torque Diagram =====
+const T_max = 10.0;
+const tScale = (plotH * 0.38) / T_max;
+
+function torqueY(t) { return panel1Y + plotH * 0.5 - t * tScale; }
+
+// Background / axis
+ctx.fillStyle = '#f9f9f9';
+ctx.fillRect(PAD_L, panel1Y, plotW, plotH);
+ctx.strokeStyle = '#ddd'; ctx.lineWidth = 0.5;
+ctx.strokeRect(PAD_L, panel1Y, plotW, plotH);
+
+// Zero line
+const zY1 = torqueY(0);
+ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+ctx.beginPath(); ctx.moveTo(PAD_L, zY1); ctx.lineTo(PAD_L + plotW, zY1); ctx.stroke();
+ctx.setLineDash([]);
+
+// Label panel
+ctx.fillStyle = '#444'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'left';
+ctx.fillText('扭矩圖 (kN·m)', PAD_L, panel1Y - 8);
+
+// Brass (red-ish) - Tb
+// AB: full T in brass
+// BC: T_b_BC in brass
+// CD: 0 in brass
+const brassColor = '#c0392b';
+// AB segment brass bar
+const ab_halfH = T * tScale / 2;
+drawBar(0, L_AB, torqueY(T/2), T * tScale / 2, brassColor, null);
+// BC segment brass bar
+const bc_b_halfH = T_b_BC * tScale / 2;
+drawBar(L_AB, L_AB + L_BC, torqueY(T_b_BC/2), bc_b_halfH, brassColor, null);
+
+// Steel (blue) - Ts
+// AB: 0
+// BC: T_s_BC in steel
+// CD: full T in steel
+const steelColor = '#2980b9';
+drawBar(L_AB, L_AB + L_BC, torqueY(-T_s_BC/2), T_s_BC * tScale / 2, steelColor, null);
+drawBar(L_AB + L_BC, L_total, torqueY(-T/2), T * tScale / 2, steelColor, null);
+
+// Labels on bars
+ctx.font = '10px sans-serif';
+ctx.textAlign = 'center';
+ctx.fillStyle = brassColor;
+ctx.fillText('T_b = 10', toCanvasX(L_AB/2), torqueY(T) + 14);
+ctx.fillText(`T_b = ${T_b_BC.toFixed(2)}`, toCanvasX(L_AB + L_BC/2), torqueY(T_b_BC) + 14);
+ctx.fillStyle = steelColor;
+ctx.fillText(`T_s = ${T_s_BC.toFixed(2)}`, toCanvasX(L_AB + L_BC/2), torqueY(-T_s_BC) - 4);
+ctx.fillText('T_s = 10', toCanvasX(L_AB + L_BC + L_CD/2), torqueY(-T) - 4);
+
+// Y axis ticks
+ctx.fillStyle = '#555'; ctx.font = '9px sans-serif'; ctx.textAlign = 'right';
+[-10, -5, 0, 5, 10].forEach(v => {
+  const y = torqueY(v);
+  ctx.fillText(v, PAD_L - 3, y + 3);
+  ctx.strokeStyle = '#ccc'; ctx.lineWidth = 0.5;
+  ctx.beginPath(); ctx.moveTo(PAD_L, y); ctx.lineTo(PAD_L + plotW, y); ctx.stroke();
+});
+
+// ===== Panel 2: Twist angle diagram =====
+const phi_total = phi_AB + phi_BC + phi_CD;
+const phiScale = (plotH * 0.8) / phi_total;
+
+function phiY(phi) { return panel2Y + plotH - phi * phiScale - 10; }
+
+ctx.fillStyle = '#f9f9f9';
+ctx.fillRect(PAD_L, panel2Y, plotW, plotH);
+ctx.strokeStyle = '#ddd'; ctx.lineWidth = 0.5;
+ctx.strokeRect(PAD_L, panel2Y, plotW, plotH);
+
+// Label panel
+ctx.fillStyle = '#444'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'left';
+ctx.fillText('扭轉角累積圖 (rad)', PAD_L, panel2Y - 8);
+
+// Draw accumulated twist line
+const phiColor = '#8e44ad';
+ctx.strokeStyle = phiColor; ctx.lineWidth = 2.5; ctx.setLineDash([]);
+ctx.beginPath();
+// Points: A=0, B=phi_AB, C=phi_AB+phi_BC, D=total
+const pts = [
+  [0, 0],
+  [L_AB, phi_AB],
+  [L_AB + L_BC, phi_AB + phi_BC],
+  [L_total, phi_total]
+];
+pts.forEach(([x, phi], i) => {
+  const cx = toCanvasX(x), cy = phiY(phi);
+  if (i === 0) ctx.moveTo(cx, cy); else ctx.lineTo(cx, cy);
+});
+ctx.stroke();
+
+// Dots at key points
+pts.forEach(([x, phi]) => {
+  ctx.beginPath();
+  ctx.arc(toCanvasX(x), phiY(phi), 4, 0, 2*Math.PI);
+  ctx.fillStyle = phiColor; ctx.fill();
+});
+
+// Labels at dots
+const pLabels = [
+  [0, 0, '0 rad', 'right'],
+  [L_AB, phi_AB, phi_AB.toFixed(4) + ' rad', 'left'],
+  [L_AB + L_BC, phi_AB + phi_BC, (phi_AB+phi_BC).toFixed(4) + ' rad', 'left'],
+  [L_total, phi_total, 'π/12 = 0.2618', 'left']
+];
+ctx.font = '9px sans-serif'; ctx.fillStyle = '#6c3483';
+pLabels.forEach(([x, phi, label, align]) => {
+  ctx.textAlign = align;
+  const cx = toCanvasX(x) + (align === 'left' ? 6 : -6);
+  ctx.fillText(label, cx, phiY(phi) - 5);
+});
+
+// Y axis ticks
+ctx.fillStyle = '#555'; ctx.font = '9px sans-serif'; ctx.textAlign = 'right';
+[0, 0.05, 0.10, 0.15, 0.20, 0.25].forEach(v => {
+  if (v > phi_total) return;
+  const y = phiY(v);
+  ctx.fillText(v.toFixed(2), PAD_L - 3, y + 3);
+  ctx.strokeStyle = '#ccc'; ctx.lineWidth = 0.5; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(PAD_L, y); ctx.lineTo(PAD_L + plotW, y); ctx.stroke();
+  ctx.setLineDash([]);
+});
+
+// Allow line
+const allowY = phiY(phi_total);
+ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 1.5; ctx.setLineDash([6,3]);
+ctx.beginPath(); ctx.moveTo(PAD_L, allowY); ctx.lineTo(PAD_L + plotW, allowY); ctx.stroke();
+ctx.setLineDash([]);
+ctx.fillStyle = '#e74c3c'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
+ctx.fillText('φ_allow = 15°', PAD_L + plotW - 4, allowY - 4);
+
+// X axis: segment labels
+const xAxisY = H - PAD_B + 6;
+const segments = [
+  [0, L_AB, 'AB（黃銅）1m', '#c0392b'],
+  [L_AB, L_AB + L_BC, `BC（複合）${x_bc}m`, '#7d3c98'],
+  [L_AB + L_BC, L_total, 'CD（鋼桿）2m', '#2980b9']
+];
+ctx.font = '10px sans-serif';
+segments.forEach(([x0, x1, label, color]) => {
+  const cx0 = toCanvasX(x0), cx1 = toCanvasX(x1);
+  ctx.fillStyle = color + '22';
+  ctx.fillRect(cx0, 0, cx1 - cx0, H - PAD_B);
+  // divider lines
+  ctx.strokeStyle = color + '66'; ctx.lineWidth = 1; ctx.setLineDash([4,2]);
+  if (x0 > 0) { ctx.beginPath(); ctx.moveTo(cx0, 0); ctx.lineTo(cx0, H - PAD_B); ctx.stroke(); }
+  ctx.setLineDash([]);
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.fillText(label, (cx0 + cx1) / 2, xAxisY + 12);
+});
+
+// Point labels A, B, C, D
+['A', 'B', 'C', 'D'].forEach((pt, i) => {
+  const xm = [0, L_AB, L_AB + L_BC, L_total][i];
+  const cx = toCanvasX(xm);
+  ctx.fillStyle = '#333'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(pt, cx, xAxisY);
+});
+</script>
+</body>
+</html>

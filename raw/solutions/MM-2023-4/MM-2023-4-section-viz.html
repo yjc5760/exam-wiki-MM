@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>MM-2023-4 複合斷面偏心軸力應力分布</title>
+<style>
+  body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; margin: 0; padding: 16px; }
+  h2 { color: #a0c4ff; text-align: center; font-size: 15px; margin: 0 0 6px; }
+  .subtitle { text-align: center; font-size: 11.5px; color: #aaa; margin-bottom: 14px; }
+  .container { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+  .panel { background: #16213e; border-radius: 10px; padding: 14px; }
+  .panel h3 { color: #ffd166; font-size: 12px; margin: 0 0 8px; text-align: center; }
+  canvas { display: block; margin: 0 auto; }
+  .formula { background: #0d3b66; border-radius: 6px; padding: 8px 10px; font-size: 11px;
+             color: #a8d8ff; margin-top: 8px; font-family: 'Courier New', monospace; line-height: 1.75; }
+  .highlight { color: #ff9f1c; font-weight: bold; }
+  input[type=range] { width: 160px; accent-color: #a0c4ff; }
+  .ctrl { text-align: center; font-size: 11px; color: #ccc; margin-top: 6px; }
+  label { margin-right: 6px; }
+</style>
+</head>
+<body>
+<h2>MM-2023-4 雙材料複合斷面 — 偏心軸力應力分析</h2>
+<div class="subtitle">調整 n = E₁/E₂ 與偏心距 e，觀察應力分布變化</div>
+
+<div class="container">
+  <div class="panel">
+    <h3>複合斷面示意 + 等效形心位置</h3>
+    <canvas id="cvSection" width="220" height="300"></canvas>
+  </div>
+
+  <div class="panel">
+    <h3>無偏心情形(c) — 應力分布</h3>
+    <canvas id="cvNoEcc" width="220" height="300"></canvas>
+  </div>
+
+  <div class="panel">
+    <h3>偏心情形(a) — 應力分布（軸力 + 彎矩）</h3>
+    <canvas id="cvEcc" width="220" height="300"></canvas>
+  </div>
+</div>
+
+<div class="ctrl">
+  <label>n = E₁/E₂：</label>
+  <input type="range" id="sliderN" min="0.5" max="4" step="0.1" value="2">
+  <span id="nVal">2.0</span>
+  &nbsp;&nbsp;&nbsp;
+  <label>偏心 e/h：</label>
+  <input type="range" id="sliderE" min="0" max="0.8" step="0.05" value="0.3">
+  <span id="eVal">0.30</span>
+</div>
+
+<div class="container" style="margin-top:10px;">
+  <div class="panel" style="width:580px;">
+    <h3>計算結果（符號形式）</h3>
+    <div class="formula" id="formulaBox">
+      調整滑桿，結果自動更新...
+    </div>
+  </div>
+</div>
+
+<script>
+const W1 = 220, H1 = 300;
+const margin = {left:30, right:30, top:30, bottom:30};
+const drawH = H1 - margin.top - margin.bottom; // 高度畫面範圍
+const tw = 36; // 斷面寬（畫面）
+const bh = drawH * 0.42; // 每半段高度（畫面）
+
+function drawAll() {
+  const n = parseFloat(document.getElementById('sliderN').value);
+  const eRatio = parseFloat(document.getElementById('sliderE').value);
+  document.getElementById('nVal').textContent = n.toFixed(1);
+  document.getElementById('eVal').textContent = eRatio.toFixed(2);
+
+  // 等效形心位置 (分率，0=底，1=頂)
+  const ybar_frac = (3*n+1) / (2*(n+1)) / 2; // 自底端 y_bar/(2h)
+  // 偏心矩臂 e'
+  const eN_frac = (n-1)/(2*(n+1)) + eRatio/2; // e'/(2h)
+
+  // ---- (1) 斷面示意 ----
+  {
+    const cv = document.getElementById('cvSection');
+    const ctx = cv.getContext('2d');
+    ctx.clearRect(0,0,W1,H1);
+    const cx = W1/2;
+    const topY = margin.top;
+    const botY = margin.top + drawH;
+    const midY = (topY + botY)/2;
+
+    // 上半（材料1，橙色）
+    ctx.fillStyle = 'rgba(255,160,50,0.75)';
+    ctx.fillRect(cx - tw/2, topY, tw, bh);
+    ctx.strokeStyle = '#ffa030'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(cx - tw/2, topY, tw, bh);
+
+    // 下半（材料2，藍色）
+    ctx.fillStyle = 'rgba(80,150,255,0.5)';
+    ctx.fillRect(cx - tw/2, midY, tw, bh);
+    ctx.strokeStyle = '#5096ff'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(cx - tw/2, midY, tw, bh);
+
+    // 幾何中心線
+    ctx.setLineDash([4,3]); ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx-tw/2-12, midY); ctx.lineTo(cx+tw/2+12, midY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 等效形心線（紅色）
+    const ybar_y = botY - ybar_frac * 2 * bh; // 畫面 y 坐標
+    ctx.strokeStyle = '#ff6b6b'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx-tw/2-18, ybar_y); ctx.lineTo(cx+tw/2+18, ybar_y); ctx.stroke();
+
+    // 標籤
+    ctx.fillStyle = '#ffa030'; ctx.font = 'bold 10px Segoe UI';
+    ctx.fillText(`E₁（n=${n.toFixed(1)}）`, cx - tw/2 + 2, topY + bh/2 + 3);
+    ctx.fillStyle = '#5096ff';
+    ctx.fillText('E₂（基準）', cx - tw/2 + 2, midY + bh/2 + 3);
+
+    ctx.fillStyle = '#aaa'; ctx.font = '9px Segoe UI';
+    ctx.fillText('幾何中心', cx + tw/2 + 4, midY + 4);
+    ctx.fillStyle = '#ff6b6b';
+    ctx.fillText('等效形心', cx + tw/2 + 4, ybar_y + 4);
+
+    // 偏心 e 箭頭
+    const eY = midY + eRatio * bh; // 載重作用點（幾何中心下方 e）
+    ctx.strokeStyle = '#ff9f1c'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx - tw/2 - 20, midY);
+    ctx.lineTo(cx - tw/2 - 20, eY);
+    ctx.stroke();
+    // 箭頭頭
+    ctx.beginPath();
+    ctx.moveTo(cx-tw/2-20, eY);
+    ctx.lineTo(cx-tw/2-15, eY-7);
+    ctx.lineTo(cx-tw/2-25, eY-7);
+    ctx.closePath(); ctx.fillStyle = '#ff9f1c'; ctx.fill();
+    ctx.fillStyle = '#ff9f1c'; ctx.font = '9px Segoe UI';
+    ctx.fillText('e', cx-tw/2-30, (midY+eY)/2+4);
+    ctx.fillText('P→', cx+tw/2+5, eY+4);
+
+    // 尺寸標注
+    ctx.fillStyle = '#888'; ctx.font = '9px Segoe UI';
+    ctx.fillText('h', cx-tw/2-20, topY + bh/2);
+    ctx.fillText('h', cx-tw/2-20, midY + bh/2);
+
+    // 標題
+    ctx.fillStyle = '#a0c4ff'; ctx.font = 'bold 10px Segoe UI';
+    ctx.fillText('斷面', cx-10, topY-10);
+  }
+
+  // ---- (2) 無偏心應力分布 ----
+  {
+    const cv = document.getElementById('cvNoEcc');
+    const ctx = cv.getContext('2d');
+    ctx.clearRect(0,0,W1,H1);
+    const cx = W1/2 - 20;
+    const topY = margin.top;
+    const midY = (margin.top + H1 - margin.bottom)/2;
+    const botY = H1 - margin.bottom;
+    const axisX = cx + 30;
+
+    // 應力值（正規化：σ2 = 1，σ1 = n）
+    const sigma2 = 1.0;
+    const sigma1 = n;
+    const maxSig = Math.max(sigma1, sigma2) * 1.1;
+    const scale = 80 / maxSig;
+
+    // 斷面（細條）
+    ctx.fillStyle = 'rgba(255,160,50,0.4)';
+    ctx.fillRect(axisX-4, topY, 8, bh);
+    ctx.fillStyle = 'rgba(80,150,255,0.3)';
+    ctx.fillRect(axisX-4, midY, 8, bh);
+
+    // 應力分布（均勻，矩形）
+    const s1w = sigma1 * scale;
+    const s2w = sigma2 * scale;
+
+    ctx.fillStyle = 'rgba(255,160,50,0.25)';
+    ctx.fillRect(axisX, topY, s1w, bh);
+    ctx.fillStyle = 'rgba(80,150,255,0.2)';
+    ctx.fillRect(axisX, midY, s2w, bh);
+
+    ctx.strokeStyle = '#ffa030'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(axisX, topY);
+    ctx.lineTo(axisX + s1w, topY);
+    ctx.lineTo(axisX + s1w, midY);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#5096ff'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(axisX + s2w, midY);
+    ctx.lineTo(axisX + s2w, midY + bh);
+    ctx.lineTo(axisX, midY + bh);
+    ctx.stroke();
+
+    // 接合面突變連線
+    ctx.strokeStyle = '#ff6b6b'; ctx.lineWidth = 1.5; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(axisX + s2w, midY); ctx.lineTo(axisX + s1w, midY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 軸線
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(axisX, topY-5); ctx.lineTo(axisX, botY+5); ctx.stroke();
+
+    // 標籤
+    ctx.fillStyle = '#ffa030'; ctx.font = '10px Segoe UI';
+    ctx.fillText(`σ₁=${sigma1.toFixed(1)}σ₀`, axisX + s1w + 3, topY + bh/2);
+    ctx.fillStyle = '#5096ff';
+    ctx.fillText(`σ₂=${sigma2.toFixed(1)}σ₀`, axisX + s2w + 3, midY + bh/2);
+    ctx.fillStyle = '#aaa'; ctx.font = '9px Segoe UI';
+    ctx.fillText('(σ₀=P/[(E₁+E₂)ht]×E₂)', axisX - 28, botY + 14);
+
+    ctx.fillStyle = '#ff6b6b'; ctx.font = '9px Segoe UI';
+    ctx.fillText('突變', axisX + (s1w+s2w)/2 - 12, midY - 5);
+
+    ctx.fillStyle = '#a0c4ff'; ctx.font = 'bold 10px Segoe UI';
+    ctx.fillText('情形(c) 無偏心', axisX - 30, topY - 10);
+  }
+
+  // ---- (3) 偏心應力分布 ----
+  {
+    const cv = document.getElementById('cvEcc');
+    const ctx = cv.getContext('2d');
+    ctx.clearRect(0,0,W1,H1);
+    const topY = margin.top;
+    const midY = (margin.top + H1 - margin.bottom)/2;
+    const botY = H1 - margin.bottom;
+    const axisX = W1/2;
+
+    // 計算轉換斷面等效慣性矩（正規化）
+    // ybar: 自底端，單位 h；實際 ybar_h = (3n+1)/(2(n+1))
+    const ybar_h = (3*n+1)/(2*(n+1)); // 以 h 為單位
+    const d1 = 3/2 - ybar_h; // 材料1形心距等效形心（h單位）
+    const d2 = ybar_h - 1/2; // 材料2形心距等效形心（h單位）
+    // Ieq / (th^3) = n[1/12 + d1^2] + [1/12 + d2^2]
+    const Ieq_norm = n*(1/12 + d1*d1) + (1/12 + d2*d2);
+    const Aeq_norm = n + 1; // Aeq / (ht)
+
+    // 偏心矩臂 e' (h單位)
+    const eH = eRatio; // e/h
+    const ePrime_h = ybar_h - (1 - eH); // e' = ybar - (h - e) 以 h 為單位 → ybar_h - (1 - eH)
+
+    // 軸力應力（正規化）σ_axial = 1/Aeq_norm
+    const sigma_axial = 1 / Aeq_norm;
+
+    // 彎矩 M = P * e' → M/P = ePrime_h (h單位)
+    // σ_bend(y) = M*(y-ybar) / Ieq = P*ePrime_h*(y_h - ybar_h) / Ieq_norm（y_h: y/h）
+    // 以 P/(ht) 為單位
+
+    // 4 個關鍵 y 位置（h單位）：0, h⁻, h⁺, 2h
+    const pts = [0, 1, 1, 2]; // y/h
+    const mats = [2, 2, 1, 1]; // 材料
+    const ys_draw = [botY, midY, midY, topY];
+
+    function sigma(y_h, mat) {
+      const bend = ePrime_h * (y_h - ybar_h) / Ieq_norm;
+      const axial = sigma_axial;
+      const tr_stress = axial + bend;
+      return mat === 1 ? n * tr_stress : tr_stress;
+    }
+
+    const sigs = [sigma(0,2), sigma(1,2), sigma(1,1), sigma(2,1)];
+    const maxS = Math.max(...sigs.map(Math.abs)) * 1.2 || 1;
+    const scale = 75 / maxS;
+
+    // 繪製斷面細條
+    ctx.fillStyle = 'rgba(255,160,50,0.35)';
+    ctx.fillRect(axisX-4, topY, 8, bh);
+    ctx.fillStyle = 'rgba(80,150,255,0.25)';
+    ctx.fillRect(axisX-4, midY, 8, bh);
+
+    // 繪製應力分布折線（正值向右，負值向左）
+    const pts4 = [
+      {y: botY, s: sigs[0], mat: 2},
+      {y: midY, s: sigs[1], mat: 2},
+      {y: midY, s: sigs[2], mat: 1},
+      {y: topY, s: sigs[3], mat: 1},
+    ];
+
+    // 填充面積
+    ctx.fillStyle = 'rgba(100,200,150,0.15)';
+    ctx.beginPath();
+    ctx.moveTo(axisX, pts4[0].y);
+    pts4.forEach(p => ctx.lineTo(axisX + p.s * scale, p.y));
+    ctx.lineTo(axisX, pts4[3].y);
+    ctx.closePath(); ctx.fill();
+
+    // 線條
+    ctx.strokeStyle = '#06d6a0'; ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    pts4.forEach((p, i) => {
+      if(i===0) ctx.moveTo(axisX + p.s*scale, p.y);
+      else ctx.lineTo(axisX + p.s*scale, p.y);
+    });
+    ctx.stroke();
+
+    // 接合面突變
+    ctx.strokeStyle = '#ff6b6b'; ctx.lineWidth = 1.5; ctx.setLineDash([3,3]);
+    ctx.beginPath();
+    ctx.moveTo(axisX + sigs[1]*scale, midY);
+    ctx.lineTo(axisX + sigs[2]*scale, midY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 零軸線
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(axisX, topY-5); ctx.lineTo(axisX, botY+5); ctx.stroke();
+
+    // 等效形心標記
+    const ybar_draw = botY - ybar_h/(2) * (botY - topY);
+    ctx.strokeStyle = '#ff6b6b'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(axisX-18, ybar_draw); ctx.lineTo(axisX+18, ybar_draw); ctx.stroke();
+
+    // 值標籤
+    ctx.font = '9px Segoe UI';
+    sigs.forEach((s, i) => {
+      const x = axisX + s*scale + (s >= 0 ? 3 : -48);
+      const y = ys_draw[i] + (i < 2 ? -4 : 10);
+      ctx.fillStyle = mats[i] === 1 ? '#ffa030' : '#5096ff';
+      ctx.fillText(s.toFixed(2)+'σ₀', x, y);
+    });
+
+    ctx.fillStyle = '#ff6b6b'; ctx.font = '8px Segoe UI';
+    ctx.fillText('等效形心', axisX+10, ybar_draw+3);
+
+    ctx.fillStyle = '#a0c4ff'; ctx.font = 'bold 10px Segoe UI';
+    ctx.fillText('情形(a) 偏心', axisX-30, topY-10);
+    ctx.fillStyle = '#aaa'; ctx.font = '9px Segoe UI';
+    ctx.fillText('(σ₀=P/[(n+1)ht])', axisX - 28, botY + 14);
+  }
+
+  // ---- 公式框更新 ----
+  const n_val = parseFloat(document.getElementById('sliderN').value);
+  const e_val = parseFloat(document.getElementById('sliderE').value);
+  const ybar_h = (3*n_val+1)/(2*(n_val+1));
+  const d1 = 3/2 - ybar_h;
+  const d2 = ybar_h - 1/2;
+  const Ieq = n_val*(1/12 + d1*d1) + (1/12 + d2*d2);
+  const ePrime = ybar_h - (1 - e_val);
+
+  document.getElementById('formulaBox').innerHTML = `
+n = E₁/E₂ = ${n_val.toFixed(1)} &nbsp;|&nbsp; e/h = ${e_val.toFixed(2)}<br>
+<span class="highlight">等效形心 ȳ = h(3n+1)/[2(n+1)] = ${ybar_h.toFixed(3)}h（自底端）</span><br>
+偏心矩臂 e' = ȳ - (h - e) = ${ePrime.toFixed(3)}h<br>
+等效慣性矩 Ieq / (th³) = ${Ieq.toFixed(4)}<br>
+等效面積 Aeq = (n+1)ht = ${(n_val+1).toFixed(1)}ht<br>
+<br>
+【無偏心(c)】應變 ε = P/[(E₁+E₂)ht]<br>
+&nbsp;&nbsp;σ₁ = nE₂·ε = ${n_val.toFixed(1)}σ₀ &nbsp;|&nbsp; σ₂ = E₂·ε = σ₀ &nbsp;|&nbsp; δ = PL/[(E₁+E₂)ht]<br>
+<br>
+【偏心(a)】M = Pe' = ${ePrime.toFixed(3)}Ph，疊加軸力 P + 彎矩 M<br>
+&nbsp;&nbsp;頂端(材1外): σ₁(2h) = n·[1/Aeq + M·(2h-ȳ)/Ieq]<br>
+&nbsp;&nbsp;接合面(材2): σ₂(h) = 1/Aeq + M·(h-ȳ)/Ieq，材1側乘以 n
+  `;
+}
+
+document.getElementById('sliderN').addEventListener('input', drawAll);
+document.getElementById('sliderE').addEventListener('input', drawAll);
+drawAll();
+</script>
+</body>
+</html>
