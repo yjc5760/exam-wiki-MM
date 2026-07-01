@@ -1,4 +1,4 @@
-# 結構工程技師考試知識庫 — 材料力學（MM）
+﻿# 結構工程技師考試知識庫 — 材料力學（MM）
 
 > 科目代碼：MM｜資料夾：`exam-wiki-MM`｜其他科目另建獨立資料庫
 
@@ -7,8 +7,8 @@
 本資料庫專門收錄「專門職業及技術人員高等考試結構工程技師」**第一科：材料力學**的考古題解析知識庫。
 
 - **科目代碼：** MM（Mechanics of Materials）
-- **題目編號格式：** MM-YYYY-N（如 MM-2016-1）
-- **其他科目：** 各自建立獨立資料庫（exam-wiki-SS、exam-wiki-RC 等）
+- **題目編號格式：** MM-YYYY-N（如 MM-2015-1）
+- **其他科目：** 各自建立獨立資料庫（exam-wiki-SS、exam-wiki-SM 等）
 
 **核心工作流程：**
 ```
@@ -82,7 +82,8 @@ exam-wiki-MM/
 │       ├── MM-YYYY-N/
 │       │   ├── MM-YYYY-N.md
 │       │   ├── MM-YYYY-N-fig-1.png
-│       │   └── MM-YYYY-N-[內容碼]-viz.html
+│       │   ├── MM-YYYY-N-[內容碼]-viz.html
+│       │   └── *.pdf                    ← 補充筆記（選用，命名無限制）
 │       └── methods/                 ← 解題方法論
 │
 └── wiki/                            ← 知識庫輸出
@@ -115,7 +116,7 @@ Wiki 導航依七層知識架構組織（前三層由 Cowork 透過 compile-all/
 | Layer 4 | `diagnosis/` | Cowork (直接存入) | 題型診斷決策樹 |
 | Layer 5 | `failure-modes/` | Cowork (直接存入) | 失敗模式（降伏/挫屈/斷裂/過大變形） |
 | Layer 6 | `materials/` | Cowork (直接存入) | 材料行為（彈性-塑性/韌性/脆性/疲勞） |
-| Layer 7 | `code-ref/` | Cowork (直接存入) | 參考公式對應（正向應力/剪應力/扭轉/撓度/挫屈） |
+| Layer 7 | `code-ref/` | Cowork (直接存入) | 規範條文對應（正向應力/剪應力/扭轉/撓度/挫屈） |
 
 > **補充目錄 `wiki/traps/`：** 不屬於七層架構，由 compile-all 從題目解析萃取陷阱頁面，與 concepts/ 並列為輔助導航。
 
@@ -130,34 +131,35 @@ Wiki 導航依七層知識架構組織（前三層由 Cowork 透過 compile-all/
 
 | topicId | 命題大綱子項 |
 |---------|------------|
-| MM-U1-1 | 斷面性質計算 |
-| MM-U1-2 | 虎克定律應用 |
-| MM-U1-3 | 應力及應變分析原理與應用 |
+| MM-U1-1 | MM 梁彎矩強度分析與設計 |
+| MM-U1-2 | MM 柱強度分析與設計 |
+| MM-U1-3 | 細長柱 |
+| MM-U1-4 | 柱設計圖之應用 |
 
-### 第二單元（MM-U2）：斷面應力分析
-
-| topicId | 命題大綱子項 |
-|---------|------------|
-| MM-U2-1 | 軸力桿件斷面應力計算 |
-| MM-U2-2 | 梁桿件斷面應力計算 |
-| MM-U2-3 | 扭力桿件斷面應力計算 |
-
-### 第三單元（MM-U3）：變位與內力分析
+### 第二單元（MM-U2）
 
 | topicId | 命題大綱子項 |
 |---------|------------|
-| MM-U3-1 | 軸力桿件變位及內力分析 |
-| MM-U3-2 | 梁桿件變位及內力分析 |
-| MM-U3-3 | 扭力桿件變位及內力分析 |
-| MM-U3-4 | 柱之挫屈載重分析 |
-| MM-U3-5 | 動態變位分析 |
+| MM-U2-1 | MM 剪力強度分析與設計 |
+| MM-U2-2 | MM 扭力強度設計 |
+| MM-U2-3 | 鋼筋錨定長度與斷點計算 |
 
-### 第四單元（MM-U4）：塑性分析
+### 第三單元（MM-U3）
 
 | topicId | 命題大綱子項 |
 |---------|------------|
-| MM-U4-1 | 軸力桿件、扭力桿件與梁之塑性分析 |
-| MM-U4-2 | 殘留應力與應變 |
+| MM-U3-1 | 梁工作性要求（含撓度、裂縫） |
+| MM-U3-2 | 樓版與基腳設計 |
+| MM-U3-3 | 韌性要求與耐震設計 |
+
+### 第四單元（MM-U4）
+
+| topicId | 命題大綱子項 |
+|---------|------------|
+| MM-U4-1 | 預力梁斷面應力分析 |
+| MM-U4-2 | 預力量與偏心量設計 |
+| MM-U4-3 | 預力損失 |
+| MM-U4-4 | 預力梁剪力分析與設計 |
 
 ---
 
@@ -178,8 +180,14 @@ Wiki 導航依七層知識架構組織（前三層由 Cowork 透過 compile-all/
 
 | 日期 | 變更 | 原因 |
 |------|------|------|
-| 2026-05-29 | 從 exam-wiki-SS 克隆 RC 版本 | RC 科目建庫 |
-| 2026-06-04 | 三層架構改為兩層（User/Cowork） | 知識庫全程在 Cowork 運行 |
-| 2026-06-11 | 新增 dashboard；指令擴充至 16 個 | 建立視覺化入口 |
-| 2026-06-26 | study 指令輸出目錄改為 study/ | 講義集中管理 |
-| 2026-06-29 | 全面改寫為 MM（材料力學）科目 | 從 exam-wiki-RC 克隆後轉換科目 |
+| 2026-05-29 | 從 exam-wiki-SS 克隆，全面改寫為 MM 科目 | 建立材料力學獨立知識庫 |
+| 2026-06-04 | 從三層架構（User/Cowork/Claude Code）改為兩層（User/Cowork） | 知識庫全程在 Cowork 運行，無獨立 Claude Code 終端機環境 |
+| 2026-06-04 | Cowork 指令由 4 個擴充至 15 個（新增備考分析類、查詢快捷類、題庫維護類） | 增強備考分析與知識查詢功能 |
+| 2026-06-08 | 修正 concepts.json classification 格式（MM-N → MM-UN-n）；修正 CLAUDE-SPEC.md §6 殘留 SS 類別代碼；更新 檔案架構索引表.md 快照數字；澄清 wiki/traps/ 補充目錄定位 | 知識庫 review 後修正 |
+| 2026-06-11 | 新增 index.html + dashboard-data.js（離線儀表板：題庫篩選/統計/進度追蹤/指令速查）；指令由 15 個擴充至 16 個（新增 refresh-dashboard）；補完 lint SKIP 項掃描（hasViz/hasHandwritten/圖說均一致） | 建立使用者視覺化入口，提升知識庫易用性 |
+| 2026-06-26 | study 指令輸出目錄從 wiki/queries/ 改為 study/；新增子項層級（study MM-UN-n）深度複習格式（七區塊：命題分析/截面圖解/解題流程/公式/考題清單/陷阱/互動計算） | 講義與複習頁集中在 study/ 管理，wiki/queries/ 保留純查詢結果 |
+| 2026-06-30 | 修正 study 指令產生的考題連結路徑，改為直接連結至 `raw/solutions/` 下的原始 md 檔 | 解決透過 index.html#md 渲染器預覽時，相對路徑附圖與 PDF 補充資料無法載入的 bug |
+| 2026-06-30 | index.html 題庫瀏覽新增「📎 補充筆記 PDF」按鈕與「📎 掃描補充 PDF」工具列按鈕；使用者可將任意 .pdf 放入 `raw/solutions/MM-YYYY-N/`，dashboard 透過 File System Access API 即時掃描顯示（不修改 dashboard-data.js）；更新 CLAUDE-CODE.md、CLAUDE-SPEC.md、CLAUDE.md 補充規範 | 支援每題補充筆記 PDF 快速存取 |
+| 2026-07-01 | index.html「考點統計」頁籤改為呈現 frequency 指令輸出格式（高頻考點 Top10、各單元命題比例、近5年趨勢動態計算），移除原設計法分布與高頻標籤 Top20 兩張卡片 | 對齊 CLAUDE-CODE.md FREQUENCY 指令規格，避免統計呈現重複 |
+| 2026-07-01 | dashboard-data.js 每題新增 pdf 補充筆記檔名陣列欄位（由 REFRESH-DASHBOARD 掃描 raw/solutions/MM-YYYY-N/ 下 *.pdf 寫入）；index.html 移除「📎 掃描補充 PDF」工具列按鈕與前端即時掃描機制（injectPdfButtons/pdfCache/listDir），改為依 dashboard-data.js 靜態資料直接顯示「📎 補充筆記 PDF」按鈕；同步更新 CLAUDE-CODE.md、CLAUDE-SPEC.md | 使用者自行放入補充 PDF 後無需手動點擊掃描按鈕，題卡即可自動顯示 PDF 連結 |
+

@@ -158,14 +158,11 @@
 
   <!-- 考點統計 -->
   <section class="panel" id="p-charts">
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:12px">本頁內容對應 <code style="background:#eef2f7;padding:1px 6px;border-radius:4px">frequency</code> 指令輸出格式，資料隨 <code style="background:#eef2f7;padding:1px 6px;border-radius:4px">dashboard-data.js</code> 更新自動重新計算。</p>
+    <div class="card"><h2>🔥 高頻考點 Top 10（主＋副考點次數）</h2><div id="chartFreqTop"></div></div>
     <div class="grid2">
-      <div class="card"><h2>四單元命題比例（主考點）</h2><div id="chartUnit"></div></div>
-      <div class="card"><h2>設計法分布</h2><div id="chartMethod"></div></div>
-    </div>
-    <div class="card"><h2>各考點出題次數（含副考點，依頻率排序）</h2><div id="chartTopic"></div></div>
-    <div class="grid2">
-      <div class="card"><h2>近 5 年考點走向（2021–2025）</h2><div id="recent"></div></div>
-      <div class="card"><h2>高頻標籤 Top 20</h2><div class="tags" id="topTags"></div></div>
+      <div class="card"><h2>各單元命題比例</h2><div id="chartUnit"></div></div>
+      <div class="card"><h2 id="recentTitle">近 5 年考點走向</h2><div id="recent"></div></div>
     </div>
   </section>
 
@@ -268,7 +265,7 @@
 <script>
 (function(){
   if(!window.MM_QUESTIONS){document.getElementById('list').innerHTML='<div class="empty">找不到 dashboard-data.js，請確認檔案與本頁在同一資料夾。</div>';return;}
-  const Q = MM_QUESTIONS.map(r=>({id:r[0],year:+r[0].split('-')[1],num:+r[0].split('-')[2],roc:+r[0].split('-')[1]-1911,topic:r[1],sec:r[2],method:r[3],viz:r[4],tags:r[5]}));
+  const Q = MM_QUESTIONS.map(r=>({id:r[0],year:+r[0].split('-')[1],num:+r[0].split('-')[2],roc:+r[0].split('-')[1]-1911,topic:r[1],sec:r[2],method:r[3],viz:r[4],tags:r[5],pdf:r[6]||[]}));
   const TOPICS=MM_TOPICS, UNITS=MM_UNITS;
   const UCOLOR={U1:'var(--u1)',U2:'var(--u2)',U3:'var(--u3)',U4:'var(--u4)'};
   const unitOf=t=>t.split('-')[0];
@@ -317,6 +314,7 @@
       const u=unitOf(q.topic), p=prog[q.id]||0;
       const pTxt=p===1?'✅ 已練習':p===2?'🔁 需複習':'⬜ 未練習';
       const vizLinks=q.viz.map(v=>`<a href="raw/solutions/${q.id}/${q.id}-${v}-viz.html" target="_blank">🎛️ ${v} 互動圖</a>`).join('');
+      const pdfLinks=(q.pdf||[]).map(p=>`<button class="openpdf" data-md="raw/solutions/${q.id}/${p}" data-t="${q.id} 補充筆記">📎 補充筆記 PDF</button>`).join('');
       const secTxt=q.sec.length?`｜副：${q.sec.map(s=>TOPICS[s]||s).join('、')}`:'';
       return `<div class="qcard" style="border-left:4px solid ${UCOLOR[u]}">
         <div class="qhead">
@@ -331,6 +329,7 @@
         <div class="links">
           <button class="openmd" data-md="raw/solutions/${q.id}/${q.id}.md" data-t="${q.id} 完整解析">📄 完整解析</button>
           ${vizLinks}
+          ${pdfLinks}
         </div></div>`;}).join('');
   }
   document.getElementById('list').addEventListener('click',e=>{
@@ -340,6 +339,8 @@
     if(tg){qIn.value=tg.dataset.t;render();return;}
     const om=e.target.closest('.openmd');
     if(om){openMd(om.dataset.md,om.dataset.t);}
+    const op=e.target.closest('.openpdf');
+    if(op){openPdf(op.dataset.md,op.dataset.t);}
   });
   [qIn,fYear,fUnit,fTopic,fMethod,fProg,fViz,sortSel].forEach(el=>el.addEventListener('input',render));
 
@@ -347,33 +348,41 @@
   function bar(label,count,max,color){
     return `<div class="chartrow"><div class="lbl">${label}</div>
       <div class="bar" style="width:${count/max*55}%;background:${color}"></div><div class="cnt">${count}</div></div>`;}
+  function computeTopicFreq(){
+    const tc={};Q.forEach(q=>{tc[q.topic]=tc[q.topic]||{p:0,s:0};tc[q.topic].p++;
+      q.sec.forEach(s=>{tc[s]=tc[s]||{p:0,s:0};tc[s].s++})});
+    return Object.entries(tc).map(([t,c])=>({t,p:c.p,s:c.s,total:c.p+c.s}))
+      .sort((a,b)=>b.total-a.total||b.p-a.p);
+  }
+
   function renderCharts(){
+    // 【高頻考點 Top 10】
+    const top10=computeTopicFreq().slice(0,10);
+    const tmax=top10.length?top10[0].total:1;
+    document.getElementById('chartFreqTop').innerHTML=top10.map((e,idx)=>
+      bar(`<b>${idx+1}.</b> <span class="unitchip" style="background:${UCOLOR[unitOf(e.t)]}"></span>${e.t}｜${TOPICS[e.t]||e.t}（主 ${e.p}＋副 ${e.s}）`,e.total,tmax,UCOLOR[unitOf(e.t)])
+    ).join('');
+
+    // 【各單元命題比例】（依主考點）
     const uc={};Q.forEach(q=>{const u=unitOf(q.topic);uc[u]=(uc[u]||0)+1});
     const umax=Math.max(...Object.values(uc));
     document.getElementById('chartUnit').innerHTML=Object.entries(UNITS)
       .map(([u,n])=>bar(`<span class="unitchip" style="background:${UCOLOR[u]}"></span>${n}（${(uc[u]/Q.length*100).toFixed(0)}%）`,uc[u]||0,umax,UCOLOR[u])).join('');
-    const mc={};Q.forEach(q=>mc[q.method]=(mc[q.method]||0)+1);
-    const mmax=Math.max(...Object.values(mc));
-    document.getElementById('chartMethod').innerHTML=Object.entries(mc).sort((a,b)=>b[1]-a[1])
-      .map(([m,c])=>bar(`${m}（${(c/Q.length*100).toFixed(0)}%）`,c,mmax,'#64748b')).join('');
-    const tc={};Q.forEach(q=>{tc[q.topic]=tc[q.topic]||{p:0,s:0};tc[q.topic].p++;
-      q.sec.forEach(s=>{tc[s]=tc[s]||{p:0,s:0};tc[s].s++})});
-    const entries=Object.entries(tc).sort((a,b)=>(b[1].p+b[1].s)-(a[1].p+a[1].s));
-    const tmax=entries[0][1].p+entries[0][1].s;
-    document.getElementById('chartTopic').innerHTML=entries
-      .map(([t,c])=>bar(`<span class="unitchip" style="background:${UCOLOR[unitOf(t)]}"></span>${t}｜${TOPICS[t]||t}（主 ${c.p}＋副 ${c.s}）`,c.p+c.s,tmax,UCOLOR[unitOf(t)])).join('');
-    const recent=Q.filter(q=>q.year>=2021).sort((a,b)=>b.year-a.year||a.num-b.num);
+
+    // 【近5年趨勢】（依實際收錄年份動態取最近 5 年）
+    const yearsDesc=[...new Set(Q.map(q=>q.year))].sort((a,b)=>b-a);
+    const recentYears=yearsDesc.slice(0,5);
+    const recentSet=new Set(recentYears);
+    if(recentYears.length){
+      document.getElementById('recentTitle').textContent=
+        `近 ${recentYears.length} 年考點走向（${Math.min(...recentYears)}–${Math.max(...recentYears)}）`;
+    }
+    const recent=Q.filter(q=>recentSet.has(q.year)).sort((a,b)=>b.year-a.year||a.num-b.num);
     let html='',yr=0;
     recent.forEach(q=>{if(q.year!==yr){yr=q.year;html+=`<div style="margin-top:8px;font-weight:700">${yr}（民國 ${yr-1911}）</div>`;}
-      html+=`<div style="font-size:.85rem;margin-left:8px"><span class="unitchip" style="background:${UCOLOR[unitOf(q.topic)]}"></span>第${q.num}題：${TOPICS[q.topic]}</div>`;});
+      const secTxt=q.sec.length?`（副：${q.sec.map(s=>TOPICS[s]||s).join('、')}）`:'';
+      html+=`<div style="font-size:.85rem;margin-left:8px"><span class="unitchip" style="background:${UCOLOR[unitOf(q.topic)]}"></span>第${q.num}題：${TOPICS[q.topic]}${secTxt}</div>`;});
     document.getElementById('recent').innerHTML=html;
-    const tagc={};Q.forEach(q=>q.tags.forEach(t=>tagc[t]=(tagc[t]||0)+1));
-    document.getElementById('topTags').innerHTML=Object.entries(tagc).sort((a,b)=>b[1]-a[1]).slice(0,20)
-      .map(([t,c])=>`<span class="tag" data-t="${t}" style="font-size:${(0.76+Math.min(c,8)*0.05).toFixed(2)}rem">${t} ×${c}</span>`).join('');
-    document.getElementById('topTags').addEventListener('click',e=>{
-      const tg=e.target.closest('.tag');if(!tg)return;
-      qIn.value=tg.dataset.t;
-      document.querySelector('nav.tabs button[data-p=browse]').click();render();});
   }
 
   // ---- 分頁 ----
@@ -604,6 +613,26 @@
       const stack=baseDir?baseDir.split('/'):[];
       p.split('/').forEach(seg=>{if(seg==='..')stack.pop();else if(seg!=='.')stack.push(seg);});
       openMd(stack.join('/'),a.textContent);}));
+  }
+
+  async function openPdf(relPath, title){
+    const isHttp = window.location.protocol.startsWith('http');
+    if(isHttp){
+       window.open(relPath, '_blank');
+       return;
+    }
+    let h=await ensureDir(false);
+    if(!h){
+      alert('請先點擊「📄 完整解析」來授權讀取資料夾，授權後才能開啟 PDF。');
+      return;
+    }
+    try{
+      const f = await readFileByPath(relPath);
+      const u = URL.createObjectURL(f);
+      window.open(u, '_blank');
+    }catch(e){
+      alert('讀取 PDF 失敗：' + e.message);
+    }
   }
   window.openMd=openMd;
 })();
