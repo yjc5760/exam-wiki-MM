@@ -1,4 +1,4 @@
-﻿# exam-wiki-MM — 規格與驗證層（Spec）
+# exam-wiki-MM — 規格與驗證層（Spec）
 
 > **用途：** 所有格式規範、命名規則、完成標準的唯一依據。
 > **適用對象：** Cowork（SOLVE 解題時參照）、Claude Code（ingest/compile 時參照）、使用者（補圖截圖時參照）
@@ -34,7 +34,7 @@ MM-YYYY-N
 
 | 欄位 | 說明 | 規則 |
 |------|------|------|
-| `MM` | 科目代碼（Reinforced Concrete） | 固定，大寫 |
+| `RC` | 科目代碼（Mechanics of Materials） | 固定，大寫 |
 | `YYYY` | 西元年 | 4 位數，如 `2015` |
 | `N` | 該年第幾題 | 阿拉伯數字，無前導零，如 `1`、`2`、`3`、`4`、`5` |
 
@@ -93,7 +93,7 @@ raw/solutions/MM-YYYY-N/
 | 互動圖 | `MM-YYYY-N-[內容碼]-viz.html` | 互動計算圖 | Cowork |
 | 補充筆記 | `*.pdf`（任意檔名） | 補充講義、手寫筆記掃描等 | 使用者 |
 
-> **補充筆記 PDF：** 使用者可將任意 `.pdf` 放入此資料夾，命名無強制規範。Cowork 執行 `更新儀表板資料`（REFRESH-DASHBOARD）時會掃描並將檔名寫入 `dashboard-data.js`（q.pdf 欄位）；`index.html` 題庫瀏覽頁依此資料直接顯示「📎 補充筆記 PDF」按鈕，不需要另外的即時掃描按鈕。新增或移除 PDF 後須重新執行 `更新儀表板資料` 才會反映。
+> **補充筆記 PDF：** 使用者可將任意 `.pdf` 放入此資料夾，命名無強制規範。Cowork 執行 `更新儀表板資料`（REFRESH-DASHBOARD）時會掃描並將檔名寫入 `dashboard-data.js`（q.pdf 欄位）；`index.html` 題庫瀏覽頁依此資料直接顯示「📎 補充筆記 PDF」按鈕。線上環境點擊將直接開啟 PDF；本機環境下則會要求資料夾讀取授權。新增或移除 PDF 後須重新執行 `更新儀表板資料` 才會反映。
 
 方法論另建：
 
@@ -303,7 +303,7 @@ MM-YYYY-N-[內容碼]-viz.html
 
 ### 7.2 概念頁：`wiki/concepts/[CONCEPT-ID].md`
 
-概念 ID 規則：全大寫英文 + 連字號分隔（如 `BALANCED-REINFOMMEMENT-RATIO`）
+概念 ID 規則：全大寫英文 + 連字號分隔（如 `BALANCED-REINFORCEMENT-RATIO`）
 
 ```markdown
 # [概念名稱]
@@ -325,7 +325,7 @@ MM-YYYY-N-[內容碼]-viz.html
 | 目錄 | 命名格式 | 範例 |
 |------|---------|------|
 | `wiki/problems/` | `MM-YYYY-N.md` | `MM-2015-1.md` |
-| `wiki/concepts/` | `全大寫-連字號.md` | `BALANCED-REINFOMMEMENT-RATIO.md` |
+| `wiki/concepts/` | `全大寫-連字號.md` | `BALANCED-REINFORCEMENT-RATIO.md` |
 | `wiki/traps/` | `全大寫-連字號.md` | `T-BEAM-EFFECTIVE-WIDTH.md` |
 | `wiki/methods/` | `全小寫-連字號.md` | `pm-interaction-diagram.md` |
 | `wiki/queries/` | `主題-YYYY-MM-DD.md` | `預力損失陷阱-2026-05-29.md` |
@@ -348,7 +348,7 @@ MM-YYYY-N-[內容碼]-viz.html
 
 ### 命題大綱分類對照
 
-> **最新鮮的官方考點分類，請直接查閱：`raw/json/syllabus_taxonomy.json` 中 `id: "MM"` 的段落。**
+> **最新鮮的官方考點分類，請直接查閱：`raw/json/syllabus_taxonomy.json` 中 `id: "RC"` 的段落。**
 > 所有 `primaryTopicId` 與主分類名稱，一律以該檔案為唯一準則。
 > topicId 格式：`MM-UN-n`（U=單元號，n=子項號）
 
@@ -360,7 +360,7 @@ MM-YYYY-N-[內容碼]-viz.html
 | **梁彎曲** | 單筋矩形梁、雙筋梁、T形梁、有效翼板寬、Whitney應力塊、延性破壞、平衡鋼筋比、最大鋼筋比、最小鋼筋比 |
 | **梁剪力** | 臨界斷面、Vc混凝土剪力強度、Vs腹筋剪力強度、最大間距限制、最小腹筋量 |
 | **撓度裂縫** | 有效慣性矩、開裂彎矩Mcr、長期撓度修正、允許撓度、裂縫寬度控制 |
-| **柱** | 短柱、長柱效應、撓度積分圖、放大彎矩法、無側移構架、有側移構架、螺旋柱、箍筋柱 |
+| **柱** | 短柱、長柱效應、P-M互制圖、放大彎矩法、無側移構架、有側移構架、螺旋柱、箍筋柱 |
 | **板** | 單向版、雙向版、直接設計法、等效框架法、柱帶、中間帶、衝剪 |
 | **基礎** | 獨立基腳、聯合基腳、彎矩設計、衝剪驗算、單向剪力 |
 | **預力** | 先拉法、後拉法、彈性縮短損失、摩擦損失、錨定滑動損失、潛變損失、收縮損失、鬆弛損失、有效預力、使用性驗算 |
@@ -430,7 +430,7 @@ MM-YYYY-N-[內容碼]-viz.html
 |------|--------|--------|------|
 | moduleId | `MM-104-1` | `MM-2015-1` | 年份用民國而非西元 |
 | moduleId | `MM-2015-01` | `MM-2015-1` | 題號有前導零 |
-| moduleId | `rc-2015-1` | `MM-2015-1` | 科目代碼小寫 |
+| moduleId | `mm-2015-1` | `MM-2015-1` | 科目代碼小寫 |
 | 考卷 PDF | `MM-2015材料力學.pdf` | `MM-2015_材料力學.pdf` | 年份後缺底線 |
 | PNG | `MM-2015-1-fig1.png` | `MM-2015-1-fig-1.png` | 類型碼與序號間缺連字號 |
 | PNG | `MM-2015-1-eqn.png` | `MM-2015-1-eqn-1.png` | 缺序號（單張也要寫 `-1`） |

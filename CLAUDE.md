@@ -1,4 +1,4 @@
-﻿# 結構工程技師考試知識庫 — 材料力學（MM）
+# 結構工程技師考試知識庫 — 材料力學（MM）
 
 > 科目代碼：MM｜資料夾：`exam-wiki-MM`｜其他科目另建獨立資料庫
 
@@ -122,12 +122,12 @@ Wiki 導航依七層知識架構組織（前三層由 Cowork 透過 compile-all/
 
 ---
 
-## 命題大綱分類（依官方命題大綱）
+## 命題大綱分類（依官方命題大綱，93年3月公告）
 
 > topicId 格式：`MM-UN-n`，U = 單元號，n = 子項號。
 > `primaryTopicId` 填最主要考點；跨子項時用 `secondaryTopicIds` 列出。
 
-### 第一單元（MM-U1）：斷面與材料性質
+### 第一單元（MM-U1）
 
 | topicId | 命題大綱子項 |
 |---------|------------|
@@ -190,4 +190,5 @@ Wiki 導航依七層知識架構組織（前三層由 Cowork 透過 compile-all/
 | 2026-06-30 | index.html 題庫瀏覽新增「📎 補充筆記 PDF」按鈕與「📎 掃描補充 PDF」工具列按鈕；使用者可將任意 .pdf 放入 `raw/solutions/MM-YYYY-N/`，dashboard 透過 File System Access API 即時掃描顯示（不修改 dashboard-data.js）；更新 CLAUDE-CODE.md、CLAUDE-SPEC.md、CLAUDE.md 補充規範 | 支援每題補充筆記 PDF 快速存取 |
 | 2026-07-01 | index.html「考點統計」頁籤改為呈現 frequency 指令輸出格式（高頻考點 Top10、各單元命題比例、近5年趨勢動態計算），移除原設計法分布與高頻標籤 Top20 兩張卡片 | 對齊 CLAUDE-CODE.md FREQUENCY 指令規格，避免統計呈現重複 |
 | 2026-07-01 | dashboard-data.js 每題新增 pdf 補充筆記檔名陣列欄位（由 REFRESH-DASHBOARD 掃描 raw/solutions/MM-YYYY-N/ 下 *.pdf 寫入）；index.html 移除「📎 掃描補充 PDF」工具列按鈕與前端即時掃描機制（injectPdfButtons/pdfCache/listDir），改為依 dashboard-data.js 靜態資料直接顯示「📎 補充筆記 PDF」按鈕；同步更新 CLAUDE-CODE.md、CLAUDE-SPEC.md | 使用者自行放入補充 PDF 後無需手動點擊掃描按鈕，題卡即可自動顯示 PDF 連結 |
-
+| 2026-07-02 | index.html 實作「線上/單機雙軌讀取」機制，線上環境（GitHub Pages 等非 file:/// 環境）自動使用 fetch 與相對路徑讀取 md、pdf 及圖片，免除資料夾授權提示 | 提升線上版儀表板的使用體驗，使其運作如同一般靜態網站 |
+| 2026-07-02 | 實作 index.html 前端的 Hash 深度連結（#md=）邏輯，正式支援 study 頁面考題點擊跳轉功能 | 補齊前端功能，完全對齊 CLAUDE-CODE.md 中 STUDY 指令的連結規格 |

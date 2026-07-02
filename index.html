@@ -44,6 +44,12 @@
   .links{margin-top:8px;display:flex;flex-wrap:wrap;gap:8px}
   .links a,.links button.openmd{font-size:.83rem;text-decoration:none;color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:3px 10px;background:#fff;cursor:pointer;font-family:inherit}
   .links a:hover,.links button.openmd:hover{background:var(--accent);color:#fff}
+  .links button.openpdf{font-size:.83rem;color:#b45309;border:1px solid #b45309;border-radius:6px;padding:3px 10px;background:#fff;cursor:pointer;font-family:inherit}
+  .links button.openpdf:hover{background:#b45309;color:#fff}
+  .pdf-drop{position:absolute;background:#fff;border:1px solid var(--line);border-radius:8px;padding:4px 0;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,.15);min-width:220px;left:0;top:calc(100% + 4px)}
+  .pdf-drop button{display:block;width:100%;text-align:left;padding:6px 14px;border:none;background:none;cursor:pointer;font-size:.82rem;font-family:inherit;white-space:nowrap}
+  .pdf-drop button:hover{background:#f1f5f9}
+  .pdf-drop .no-pdf{padding:7px 14px;font-size:.82rem;color:var(--muted)}
   .prog{margin-left:auto;cursor:pointer;user-select:none;font-size:.8rem;border-radius:6px;padding:3px 10px;border:1px dashed var(--muted);color:var(--muted)}
   .prog.s1{border:1px solid #059669;color:#059669;background:#ecfdf5}
   .prog.s2{border:1px solid #dc2626;color:#dc2626;background:#fef2f2}
@@ -151,12 +157,12 @@
         <option value="0">⬜ 未練習</option><option value="1">✅ 已練習</option><option value="2">🔁 需複習</option></select>
       <select id="fViz"><option value="">互動圖（全部）</option><option value="1">有互動圖</option></select>
       <select id="sort"><option value="desc">新→舊</option><option value="asc">舊→新</option></select>
-      <div class="hint">「📄 完整解析」在站內閱讀器開啟（Markdown＋LaTeX 渲染；首次使用需選擇一次知識庫資料夾）。點題卡右上角循環標記進度，點標籤快速搜尋。</div>
+      <div class="hint">「📄 完整解析」在站內閱讀器開啟（Markdown＋LaTeX 渲染；首次使用需選擇一次知識庫資料夾）。點題卡右上角循環標記進度，點標籤快速搜尋。有「📎 補充筆記 PDF」的題目會直接顯示按鈕（點擊時同樣需授權讀取資料夾）。</div>
     </div>
     <div class="qlist" id="list"></div>
   </section>
 
-  <!-- 考點統計 -->
+  <!-- 考點統計（frequency 指令查詢結果） -->
   <section class="panel" id="p-charts">
     <p style="font-size:.82rem;color:var(--muted);margin-bottom:12px">本頁內容對應 <code style="background:#eef2f7;padding:1px 6px;border-radius:4px">frequency</code> 指令輸出格式，資料隨 <code style="background:#eef2f7;padding:1px 6px;border-radius:4px">dashboard-data.js</code> 更新自動重新計算。</p>
     <div class="card"><h2>🔥 高頻考點 Top 10（主＋副考點次數）</h2><div id="chartFreqTop"></div></div>
@@ -314,9 +320,9 @@
       const u=unitOf(q.topic), p=prog[q.id]||0;
       const pTxt=p===1?'✅ 已練習':p===2?'🔁 需複習':'⬜ 未練習';
       const vizLinks=q.viz.map(v=>`<a href="raw/solutions/${q.id}/${q.id}-${v}-viz.html" target="_blank">🎛️ ${v} 互動圖</a>`).join('');
-      const pdfLinks=(q.pdf||[]).map(p=>`<button class="openpdf" data-md="raw/solutions/${q.id}/${p}" data-t="${q.id} 補充筆記">📎 補充筆記 PDF</button>`).join('');
       const secTxt=q.sec.length?`｜副：${q.sec.map(s=>TOPICS[s]||s).join('、')}`:'';
-      return `<div class="qcard" style="border-left:4px solid ${UCOLOR[u]}">
+      const pdfBtn=q.pdf.length?`<button class="openpdf" data-id="${q.id}">📎 補充筆記 PDF${q.pdf.length>1?`（${q.pdf.length}）`:''}</button>`:'';
+      return `<div class="qcard" data-qid="${q.id}" style="border-left:4px solid ${UCOLOR[u]}">
         <div class="qhead">
           <span class="qid">${q.id}</span><span class="roc">民國 ${q.roc} 年 第 ${q.num} 題</span>
           <span class="badge" style="background:${UCOLOR[u]}">${q.topic}</span>
@@ -326,10 +332,10 @@
         </div>
         <div class="topic">${TOPICS[q.topic]}${secTxt}</div>
         <div class="tags">${q.tags.map(t=>`<span class="tag" data-t="${t}">${t}</span>`).join('')}</div>
-        <div class="links">
+        <div class="links" style="position:relative">
           <button class="openmd" data-md="raw/solutions/${q.id}/${q.id}.md" data-t="${q.id} 完整解析">📄 完整解析</button>
           ${vizLinks}
-          ${pdfLinks}
+          ${pdfBtn}
         </div></div>`;}).join('');
   }
   document.getElementById('list').addEventListener('click',e=>{
@@ -338,9 +344,9 @@
     const tg=e.target.closest('.tag');
     if(tg){qIn.value=tg.dataset.t;render();return;}
     const om=e.target.closest('.openmd');
-    if(om){openMd(om.dataset.md,om.dataset.t);}
+    if(om){openMd(om.dataset.md,om.dataset.t);return;}
     const op=e.target.closest('.openpdf');
-    if(op){openPdf(op.dataset.md,op.dataset.t);}
+    if(op){openPdfs(op.dataset.id,op);}
   });
   [qIn,fYear,fUnit,fTopic,fMethod,fProg,fViz,sortSel].forEach(el=>el.addEventListener('input',render));
 
@@ -348,13 +354,13 @@
   function bar(label,count,max,color){
     return `<div class="chartrow"><div class="lbl">${label}</div>
       <div class="bar" style="width:${count/max*55}%;background:${color}"></div><div class="cnt">${count}</div></div>`;}
+  // ---- frequency 指令：各考點（主＋副）出題次數統計 ----
   function computeTopicFreq(){
     const tc={};Q.forEach(q=>{tc[q.topic]=tc[q.topic]||{p:0,s:0};tc[q.topic].p++;
       q.sec.forEach(s=>{tc[s]=tc[s]||{p:0,s:0};tc[s].s++})});
     return Object.entries(tc).map(([t,c])=>({t,p:c.p,s:c.s,total:c.p+c.s}))
       .sort((a,b)=>b.total-a.total||b.p-a.p);
   }
-
   function renderCharts(){
     // 【高頻考點 Top 10】
     const top10=computeTopicFreq().slice(0,10);
@@ -406,6 +412,8 @@
   }
 
   renderStats();render();renderCharts();renderExams();
+  // 靜默恢復上次的資料夾授權（僅限本機環境）
+  if(location.protocol === 'file:') ensureDir(false);
 
   /* ================= 解析閱讀器 ================= */
   const overlay=document.getElementById('overlay'),reader=document.getElementById('reader'),
@@ -470,11 +478,6 @@
     dirHandle=h;await idbSet(h);return h;
   }
   async function readFileByPath(relPath){
-    if (window.location.protocol.startsWith('http')) {
-      const res = await fetch(relPath);
-      if (!res.ok) throw new Error(res.statusText);
-      return await res.blob();
-    }
     const parts=relPath.split('/').filter(Boolean);
     let d=dirHandle;
     for(let i=0;i<parts.length-1;i++)d=await d.getDirectoryHandle(parts[i]);
@@ -551,13 +554,12 @@
     rTitle.textContent=title||relPath;
     overlay.classList.add('on');reader.classList.add('on');
     rBody.innerHTML='<div class="rmsg">讀取中…</div>';
-    const isHttp = window.location.protocol.startsWith('http');
-    if(!isHttp && !window.showDirectoryPicker){
+    const isLocal = location.protocol === 'file:';
+    if(isLocal && !window.showDirectoryPicker){
       rBody.innerHTML=`<div class="rmsg">此瀏覽器不支援資料夾讀取（File System Access API）。<br>
         建議使用 Edge 或 Chrome 開啟本儀表板。<br>
         <div class="small"><a href="${relPath}" target="_blank">改以純文字開啟原始檔 →</a></div></div>`;return;}
-    
-    if(!isHttp){
+    if(isLocal){
       let h=await ensureDir(false);
       if(!h){
         rBody.innerHTML=`<div class="rmsg">首次使用站內閱讀器，請授權讀取知識庫資料夾<br>（選擇 <b>exam-wiki-MM</b> 資料夾，僅需一次）<br>
@@ -568,14 +570,21 @@
           if(h)openMd(relPath,title);});
         return;}
     }
-    
     let text;
-    try{const f=await readFileByPath(relPath);text=await f.text();}
+    try{
+      if(!isLocal){
+        const res = await fetch(relPath);
+        if(!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+        text = await res.text();
+      }else{
+        const f=await readFileByPath(relPath);text=await f.text();
+      }
+    }
     catch(e){
       rBody.innerHTML=`<div class="rmsg">讀取失敗：${esc(relPath)}<br><div class="small">${esc(e.message||String(e))}</div><br>
-      <div class="small" style="color:var(--warn)">可能是資料夾位置已變更或檔案不存在。</div>
-      ${!isHttp ? '<button id="btnResetHandle">重新選擇資料夾</button>' : ''}</div>`;
-      if(!isHttp){
+      ${isLocal ? `<div class="small" style="color:var(--warn)">可能是資料夾位置已變更或瀏覽器授權失效。請點擊下方按鈕清除快取後重試。</div>
+      <button id="btnResetHandle">重新選擇資料夾</button>` : ''}</div>`;
+      if(isLocal){
         document.getElementById('btnResetHandle').addEventListener('click', () => {
           const r=indexedDB.open(IDB,1);
           r.onsuccess=()=>{
@@ -597,13 +606,15 @@
     rBody.querySelectorAll('img[data-mdsrc]').forEach(async img=>{
       const p=img.dataset.mdsrc;
       if(/^https?:/.test(p)){img.src=p;return;}
-      const fullP = baseDir ? baseDir + '/' + decodeURIComponent(p) : decodeURIComponent(p);
-      if(isHttp){
-        img.src = fullP;
-        return;
+      try{
+        const imgRelPath = baseDir?baseDir+'/'+decodeURIComponent(p):decodeURIComponent(p);
+        if(!isLocal){
+          img.src = imgRelPath;
+        }else{
+          const f=await readFileByPath(imgRelPath);
+          const u=URL.createObjectURL(f);blobUrls.push(u);img.src=u;
+        }
       }
-      try{const f=await readFileByPath(fullP);
-        const u=URL.createObjectURL(f);blobUrls.push(u);img.src=u;}
       catch(e){img.alt='（找不到圖片：'+p+'）';img.style.minHeight='40px';}
     });
     // .md 內部連結 → 閱讀器內開啟
@@ -614,27 +625,68 @@
       p.split('/').forEach(seg=>{if(seg==='..')stack.pop();else if(seg!=='.')stack.push(seg);});
       openMd(stack.join('/'),a.textContent);}));
   }
-
-  async function openPdf(relPath, title){
-    const isHttp = window.location.protocol.startsWith('http');
-    if(isHttp){
-       window.open(relPath, '_blank');
-       return;
-    }
-    let h=await ensureDir(false);
-    if(!h){
-      alert('請先點擊「📄 完整解析」來授權讀取資料夾，授權後才能開啟 PDF。');
-      return;
-    }
-    try{
-      const f = await readFileByPath(relPath);
-      const u = URL.createObjectURL(f);
-      window.open(u, '_blank');
-    }catch(e){
-      alert('讀取 PDF 失敗：' + e.message);
-    }
-  }
   window.openMd=openMd;
+
+  /* ================= Hash 深度連結（study 頁考題連結） ================= */
+  // 支援 index.html#md=raw/solutions/MM-YYYY-N/MM-YYYY-N.md&t=MM-YYYY-N
+  (function handleHashLink(){
+    const h=location.hash;
+    if(!h.startsWith('#md='))return;
+    const p=new URLSearchParams(h.slice(1));
+    const mdPath=p.get('md'), title=p.get('t')||mdPath;
+    if(mdPath)openMd(mdPath,title);
+  })();
+
+  /* ================= 補充筆記 PDF ================= */
+  // PDF 檔名清單由 dashboard-data.js（q.pdf，REFRESH-DASHBOARD 指令掃描寫入）提供，
+  // 不再於前端即時掃描資料夾，因此按鈕在 render() 時即已依資料直接顯示。
+
+  async function openPdfFile(relPath){
+    try{
+      if(location.protocol !== 'file:'){
+        window.open(relPath, '_blank');
+      }else{
+        const f=await readFileByPath(relPath);
+        const u=URL.createObjectURL(f);
+        window.open(u,'_blank');
+        setTimeout(()=>URL.revokeObjectURL(u),120000);
+      }
+    }catch(e){alert('無法開啟 PDF：'+e.message);}
+  }
+
+  function closePdfDrops(){ document.querySelectorAll('.pdf-drop').forEach(d=>d.remove()); }
+
+  function showPdfDrop(btn, pdfs, qId){
+    closePdfDrops();
+    const wrap=btn.closest('.links');
+    if(!wrap) return;
+    const drop=document.createElement('div');
+    drop.className='pdf-drop';
+    pdfs.forEach(name=>{
+      const b=document.createElement('button');
+      b.textContent='📄 '+name;
+      b.addEventListener('click',()=>{ openPdfFile('raw/solutions/'+qId+'/'+name); closePdfDrops(); });
+      drop.appendChild(b);
+    });
+    const btnRect=btn.getBoundingClientRect(), wrapRect=wrap.getBoundingClientRect();
+    drop.style.left=(btnRect.left-wrapRect.left)+'px';
+    wrap.appendChild(drop);
+    function outside(e){ if(!drop.contains(e.target)&&e.target!==btn){closePdfDrops();document.removeEventListener('click',outside,true);} }
+    setTimeout(()=>document.addEventListener('click',outside,true),0);
+  }
+
+  // 點擊「📎 補充筆記 PDF」按鈕：pdf 清單直接取自 Q（dashboard-data.js 靜態資料）
+  async function openPdfs(qId, btn){
+    const q=Q.find(x=>x.id===qId);
+    const pdfs=q?q.pdf:[];
+    if(!pdfs.length) return;
+    if(location.protocol === 'file:' && !dirHandle){
+      const h=await ensureDir(true);
+      if(!h) return;
+    }
+    if(pdfs.length===1){ openPdfFile('raw/solutions/'+qId+'/'+pdfs[0]); return; }
+    showPdfDrop(btn, pdfs, qId);
+  }
 })();
 </script>
 </body>
